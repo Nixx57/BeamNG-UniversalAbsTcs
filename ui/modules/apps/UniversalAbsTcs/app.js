@@ -53,6 +53,17 @@
             })
           }
 
+          scope.setMode = function () {
+            var newMode = scope.mode
+            var previousMode = newMode === 'grip' ? 'performance' : 'grip'
+
+            callUniversalAbsTcs('setMode("' + newMode + '")', function (success) {
+              scope.$evalAsync(function () {
+                if (success === false) scope.mode = previousMode
+              })
+            })
+          }
+
           syncCurrentValues()
         }
       }

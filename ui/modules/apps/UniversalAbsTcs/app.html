@@ -8,4 +8,15 @@
     <input type="checkbox" ng-model="tcsEnabled" ng-change="setTcsEnabled()" />
     <span>Universal TCS</span>
   </label>
+  <div class="universal-abs-tcs-option universal-abs-tcs-mode">
+    <span>Mode</span>
+    <label>
+      <input type="radio" name="uatMode" value="performance" ng-model="mode" ng-change="setMode()" />
+      <span>Performance</span>
+    </label>
+    <label>
+      <input type="radio" name="uatMode" value="grip" ng-model="mode" ng-change="setMode()" />
+      <span>Grip</span>
+    </label>
+  </div>
 </div>

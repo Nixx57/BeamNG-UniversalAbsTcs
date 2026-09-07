@@ -11,8 +11,10 @@ local absEnabled = false
 local tcsEnabled = false
 local wroteBrake = false
 local wroteThrottle = false
+local mode = "performance" -- "performance" (load-weighted average, maximizes braking/traction) or "grip" (worst wheel, maximizes stability)
 -- local smoothTcs = newTemporalSmoothingNonLinear(0.4, 0.9, 1) -- native AI tuning
-local smoothTcs = newTemporalSmoothing(2, 2, nil, 1) -- better -> non-asymptotic
+local smoothAbs = newTemporalSmoothing(math.huge, 2, nil, 1) -- instant cut, progressive recovery
+local smoothTcs = newTemporalSmoothing(math.huge, 2, nil, 1) -- instant cut, progressive recovery
 
 local function setEnabled(absOn, tcsOn)
   absEnabled = absOn == true
@@ -25,7 +27,14 @@ local function setEnabled(absOn, tcsOn)
     electrics.values.throttleOverride = nil
     wroteThrottle = false
   end
+  smoothAbs:set(1)
   smoothTcs:set(1)
+end
+
+local function setMode(newMode)
+  if newMode == "grip" or newMode == "performance" then
+    mode = newMode
+  end
 end
 
 local function updateGFX(dt)
@@ -42,28 +51,36 @@ local function updateGFX(dt)
   -- wheel scan
   local totalSlip = 0
   local totalPeakSlip = 0
-  local propSlip = 0
   local totalDownForce = 0
+  local maxSlipExcess = 0
+  local propSlipWeighted = 0
+  local propSlipMax = 0
+  local propDownForce = 0
   local lwheels = wheels.wheels
   for i = 0, tableSizeC(lwheels) - 1 do
     local wd = lwheels[i]
     if not wd.isBroken then
       local lastSlip = wd.lastSlip
       local downForce = wd.downForceRaw
-      totalSlip = totalSlip + lastSlip * downForce
       -- ride the tire's own peak-grip slip point instead of clamping to zero slip
-      totalPeakSlip = totalPeakSlip + (wd.slipRatioTarget or 0.18) * speed * downForce
+      local peakSlip = (wd.slipRatioTarget or 0.18) * speed
+      local slipExcess = lastSlip - peakSlip
+
+      totalSlip = totalSlip + lastSlip * downForce
+      totalPeakSlip = totalPeakSlip + peakSlip * downForce
       totalDownForce = totalDownForce + downForce
+      maxSlipExcess = max(maxSlipExcess, slipExcess)
+
       if wd.isPropulsed then
-        -- propSlip = max(propSlip, wd.lastSlip)
-        local peakSlip = (wd.slipRatioTarget or 0.18) * speed
-        propSlip = max(propSlip, lastSlip - peakSlip)
+        propSlipWeighted = propSlipWeighted + slipExcess * downForce
+        propDownForce = propDownForce + downForce
+        propSlipMax = max(propSlipMax, slipExcess)
       end
     end
   end
   totalSlip = totalSlip / (totalDownForce + 1e-25)
-  -- totalPeakSlip weighted the same way as totalSlip so they can be compared directly
   totalPeakSlip = totalPeakSlip / (totalDownForce + 1e-25)
+  propSlipWeighted = propSlipWeighted / (propDownForce + 1e-25)
 
   if speed <= 0.05 then
     if wroteBrake then
@@ -79,10 +96,9 @@ local function updateGFX(dt)
 
   -- ABS
   if absEnabled and input.brake > 0 then
-    -- local brakeCoef = min(1, 1.5 * square(square(square(max(0, speed - totalSlip) / speed))))
-    local slipExcess = max(0, totalSlip - totalPeakSlip)
+    local slipExcess = mode == "grip" and maxSlipExcess or max(0, totalSlip - totalPeakSlip)
     local brakeCoef = min(1, 1.5 * square(square(square(max(0, speed - slipExcess) / speed))))
-    electrics.values.brakeOverride = input.brake * smoothTcs:get(brakeCoef, dt)
+    electrics.values.brakeOverride = input.brake * smoothAbs:get(brakeCoef, dt)
     wroteBrake = true
   elseif wroteBrake then
     electrics.values.brakeOverride = nil
@@ -91,8 +107,7 @@ local function updateGFX(dt)
 
   -- TCS
   if tcsEnabled and input.throttle > 0 then
-    -- propSlip = propSlip * (looseGround and 0.8 or 1)
-    -- local tcsCoef = max(0.05, speed - propSlip * propSlip) / speed
+    local propSlip = mode == "grip" and propSlipMax or max(0, propSlipWeighted)
     local slipExcess = propSlip * (looseGround and 0.8 or 1)
     local tcsCoef = max(0.05, speed - slipExcess * slipExcess) / speed
     electrics.values.throttleOverride = input.throttle * smoothTcs:get(tcsCoef, dt)
@@ -105,6 +120,7 @@ local function updateGFX(dt)
 end
 
 M.setEnabled = setEnabled
+M.setMode = setMode
 M.updateGFX = updateGFX
 
 return M
