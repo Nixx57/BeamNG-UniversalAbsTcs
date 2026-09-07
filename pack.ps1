@@ -1,7 +1,5 @@
 $modRoot = $PSScriptRoot
-$appJsonPath = Join-Path $modRoot 'ui/modules/apps/UniversalAbsTcs/app.json'
-$version = (Get-Content -Raw $appJsonPath | ConvertFrom-Json).version
-$archivePath = Join-Path (Split-Path $modRoot -Parent) "universalAbsTcs_v$version.zip"
+$archivePath = Join-Path (Split-Path $modRoot -Parent) 'universalAbsTcs_v0.1.zip'
 $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) 'universalAbsTcs_package'
 
 if (Test-Path $archivePath) { Remove-Item $archivePath -Force }
