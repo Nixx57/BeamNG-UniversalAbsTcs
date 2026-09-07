@@ -11,7 +11,8 @@ local absEnabled = false
 local tcsEnabled = false
 local wroteBrake = false
 local wroteThrottle = false
-local smoothTcs = newTemporalSmoothingNonLinear(0.4, 0.9, 1) -- native AI tuning
+-- local smoothTcs = newTemporalSmoothingNonLinear(0.4, 0.9, 1) -- native AI tuning
+local smoothTcs = newTemporalSmoothing(2, 2, nil, 1) -- better -> non-asymptotic
 
 local function setEnabled(absOn, tcsOn)
   absEnabled = absOn == true
@@ -40,6 +41,7 @@ local function updateGFX(dt)
 
   -- wheel scan
   local totalSlip = 0
+  local totalPeakSlip = 0
   local propSlip = 0
   local totalDownForce = 0
   local lwheels = wheels.wheels
@@ -49,13 +51,19 @@ local function updateGFX(dt)
       local lastSlip = wd.lastSlip
       local downForce = wd.downForceRaw
       totalSlip = totalSlip + lastSlip * downForce
+      -- ride the tire's own peak-grip slip point instead of clamping to zero slip
+      totalPeakSlip = totalPeakSlip + (wd.slipRatioTarget or 0.18) * speed * downForce
       totalDownForce = totalDownForce + downForce
       if wd.isPropulsed then
-        propSlip = max(propSlip, wd.lastSlip)
+        -- propSlip = max(propSlip, wd.lastSlip)
+        local peakSlip = (wd.slipRatioTarget or 0.18) * speed
+        propSlip = max(propSlip, lastSlip - peakSlip)
       end
     end
   end
   totalSlip = totalSlip / (totalDownForce + 1e-25)
+  -- totalPeakSlip weighted the same way as totalSlip so they can be compared directly
+  totalPeakSlip = totalPeakSlip / (totalDownForce + 1e-25)
 
   if speed <= 0.05 then
     if wroteBrake then
@@ -71,8 +79,10 @@ local function updateGFX(dt)
 
   -- ABS
   if absEnabled and input.brake > 0 then
-    local brakeCoef = min(1, 1.5 * square(square(square(max(0, speed - totalSlip) / speed))))
-    electrics.values.brakeOverride = input.brake * brakeCoef
+    -- local brakeCoef = min(1, 1.5 * square(square(square(max(0, speed - totalSlip) / speed))))
+    local slipExcess = max(0, totalSlip - totalPeakSlip)
+    local brakeCoef = min(1, 1.5 * square(square(square(max(0, speed - slipExcess) / speed))))
+    electrics.values.brakeOverride = input.brake * smoothTcs:get(brakeCoef, dt)
     wroteBrake = true
   elseif wroteBrake then
     electrics.values.brakeOverride = nil
@@ -81,8 +91,10 @@ local function updateGFX(dt)
 
   -- TCS
   if tcsEnabled and input.throttle > 0 then
-    propSlip = propSlip * (looseGround and 0.8 or 1)
-    local tcsCoef = max(0.05, speed - propSlip * propSlip) / speed
+    -- propSlip = propSlip * (looseGround and 0.8 or 1)
+    -- local tcsCoef = max(0.05, speed - propSlip * propSlip) / speed
+    local slipExcess = propSlip * (looseGround and 0.8 or 1)
+    local tcsCoef = max(0.05, speed - slipExcess * slipExcess) / speed
     electrics.values.throttleOverride = input.throttle * smoothTcs:get(tcsCoef, dt)
     -- electrics.values.throttleOverride = input.throttle * tcsCoef
     wroteThrottle = true
