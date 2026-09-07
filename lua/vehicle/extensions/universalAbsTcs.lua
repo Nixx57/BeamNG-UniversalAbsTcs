@@ -11,7 +11,7 @@ local absEnabled = false
 local tcsEnabled = false
 local wroteBrake = false
 local wroteThrottle = false
--- local smoothTcs = newTemporalSmoothingNonLinear(0.4, 0.9, 1) -- native AI tuning
+local smoothTcs = newTemporalSmoothingNonLinear(0.4, 0.9, 1) -- native AI tuning
 
 local function setEnabled(absOn, tcsOn)
   absEnabled = absOn == true
@@ -24,7 +24,7 @@ local function setEnabled(absOn, tcsOn)
     electrics.values.throttleOverride = nil
     wroteThrottle = false
   end
-  -- smoothTcs:set(1)
+  smoothTcs:set(1)
 end
 
 local function updateGFX(dt)
@@ -83,8 +83,8 @@ local function updateGFX(dt)
   if tcsEnabled and input.throttle > 0 then
     propSlip = propSlip * (looseGround and 0.8 or 1)
     local tcsCoef = max(0.05, speed - propSlip * propSlip) / speed
-    -- electrics.values.throttleOverride = input.throttle * smoothTcs:get(tcsCoef, dt)
-    electrics.values.throttleOverride = input.throttle * tcsCoef
+    electrics.values.throttleOverride = input.throttle * smoothTcs:get(tcsCoef, dt)
+    -- electrics.values.throttleOverride = input.throttle * tcsCoef
     wroteThrottle = true
   elseif wroteThrottle then
     electrics.values.throttleOverride = nil
