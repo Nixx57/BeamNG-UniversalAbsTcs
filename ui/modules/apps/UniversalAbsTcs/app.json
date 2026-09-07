@@ -1,0 +1,20 @@
+{
+  "name": "Universal ABS/TCS",
+  "author": "Nixx",
+  "version": "0.1",
+  "description": "Virtual ABS/TCS driving aid that works on any vehicle.",
+  "directive": "universalAbsTcs",
+  "domElement": "<universal-abs-tcs></universal-abs-tcs>",
+  "css": {
+    "width": "260px",
+    "height": "140px",
+    "min-width": "220px",
+    "min-height": "120px",
+    "top": "200px",
+    "left": "200px"
+  },
+  "preserveAspectRatio": false,
+  "category": "General",
+  "isAuxiliary": false,
+  "interactive": "required"
+}
