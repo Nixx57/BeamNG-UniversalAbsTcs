@@ -82,18 +82,6 @@ local function updateGFX(dt)
   totalPeakSlip = totalPeakSlip / (totalDownForce + 1e-25)
   propSlipWeighted = propSlipWeighted / (propDownForce + 1e-25)
 
-  if speed <= 0.05 then
-    if wroteBrake then
-      electrics.values.brakeOverride = nil
-      wroteBrake = false
-    end
-    if wroteThrottle then
-      electrics.values.throttleOverride = nil
-      wroteThrottle = false
-    end
-    return
-  end
-
   -- ABS
   if absEnabled and input.brake > 0 then
     local slipExcess = mode == "grip" and maxSlipExcess or max(0, totalSlip - totalPeakSlip)

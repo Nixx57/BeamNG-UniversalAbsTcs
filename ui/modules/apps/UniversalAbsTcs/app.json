@@ -7,7 +7,7 @@
   "domElement": "<universal-abs-tcs></universal-abs-tcs>",
   "css": {
     "width": "260px",
-    "height": "140px",
+    "height": "110px",
     "min-width": "220px",
     "min-height": "120px",
     "top": "200px",

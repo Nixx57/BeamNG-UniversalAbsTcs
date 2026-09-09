@@ -26,12 +26,16 @@
                 if (typeof status.tcsEnabled === 'boolean') {
                   scope.tcsEnabled = status.tcsEnabled
                 }
+                if (status.mode === 'grip' || status.mode === 'performance') {
+                  scope.mode = status.mode
+                }
               })
             })
           }
 
           scope.absEnabled = false
           scope.tcsEnabled = false
+          scope.mode = 'performance'
 
           scope.setAbsEnabled = function () {
             var enable = scope.absEnabled
