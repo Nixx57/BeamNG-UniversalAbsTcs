@@ -43,50 +43,52 @@ local function updateGFX(dt)
   -- longitudinal vehicle speed, same source as ai.lua (refactored)
   local vx, vy, vz = obj:getSmoothRefVelocityXYZ()
   local dx, dy, dz = obj:getDirectionVectorXYZ()
-  local speed = max(abs(vx * dx + vy * dy + vz * dz), 3)
+  local speed = abs(vx * dx + vy * dy + vz * dz)
 
   -- if loose ground -> reduce grip and adjust TCS behavior
   local looseGround = obj:getStaticFrictionCoef() < 0.9
 
   -- wheel scan
-  local totalSlip = 0
-  local totalPeakSlip = 0
+  local brakeCoefWeighted = 0
   local totalDownForce = 0
-  local maxSlipExcess = 0
-  local propSlipWeighted = 0
-  local propSlipMax = 0
+  local brakeCoefGrip = 1
+  local propCoefWeighted = 0
+  local propCoefSum = 0
+  local propCoefGrip = 1
   local propDownForce = 0
+  local propWheelCount = 0
   local lwheels = wheels.wheels
   for i = 0, tableSizeC(lwheels) - 1 do
     local wd = lwheels[i]
     if not wd.isBroken then
-      local lastSlip = wd.lastSlip
-      local downForce = wd.downForceRaw
-      -- ride the tire's own peak-grip slip point instead of clamping to zero slip
-      local peakSlip = (wd.slipRatioTarget or 0.18) * speed
-      local slipExcess = lastSlip - peakSlip
+      local downForce = max(wd.downForceRaw or 0, 0)
+      local wheelSpeed = abs(wd.wheelSpeed or 0)
+      local peakSlipRatio = wd.slipRatioTarget or 0.18
+      local brakeTargetSpeed = speed * max(0, 1 - peakSlipRatio)
+      local driveTargetSpeed = speed * (1 + peakSlipRatio * (looseGround and 1.25 or 1))
+      local brakeCoef = min(1, wheelSpeed / brakeTargetSpeed)
+      local propCoef = min(1, driveTargetSpeed / wheelSpeed)
 
-      totalSlip = totalSlip + lastSlip * downForce
-      totalPeakSlip = totalPeakSlip + peakSlip * downForce
+      brakeCoefWeighted = brakeCoefWeighted + brakeCoef * downForce
       totalDownForce = totalDownForce + downForce
-      maxSlipExcess = max(maxSlipExcess, slipExcess)
+      brakeCoefGrip = min(brakeCoefGrip, brakeCoef)
 
       if wd.isPropulsed then
-        propSlipWeighted = propSlipWeighted + slipExcess * downForce
+        propCoefWeighted = propCoefWeighted + propCoef * downForce
+        propCoefSum = propCoefSum + propCoef
         propDownForce = propDownForce + downForce
-        propSlipMax = max(propSlipMax, slipExcess)
+        propWheelCount = propWheelCount + 1
+        propCoefGrip = min(propCoefGrip, propCoef)
       end
     end
   end
-  totalSlip = totalSlip / (totalDownForce + 1e-25)
-  totalPeakSlip = totalPeakSlip / (totalDownForce + 1e-25)
-  propSlipWeighted = propSlipWeighted / (propDownForce + 1e-25)
+  local brakeModelCoef = totalDownForce > 0 and (mode == "grip" and brakeCoefGrip or brakeCoefWeighted / totalDownForce) or 0
+  local propNoLoadCoef = propWheelCount > 0 and (mode == "grip" and propCoefGrip or propCoefSum / propWheelCount) or 1
+  local propModelCoef = propDownForce > 0 and (mode == "grip" and propCoefGrip or propCoefWeighted / propDownForce) or propNoLoadCoef
 
   -- ABS
   if absEnabled and input.brake > 0 then
-    local slipExcess = mode == "grip" and maxSlipExcess or max(0, totalSlip - totalPeakSlip)
-    local brakeCoef = min(1, 1.5 * square(square(square(max(0, speed - slipExcess) / speed))))
-    electrics.values.brakeOverride = input.brake * smoothAbs:get(brakeCoef, dt)
+    electrics.values.brakeOverride = input.brake * smoothAbs:get(brakeModelCoef, dt)
     wroteBrake = true
   elseif wroteBrake then
     electrics.values.brakeOverride = nil
@@ -95,11 +97,7 @@ local function updateGFX(dt)
 
   -- TCS
   if tcsEnabled and input.throttle > 0 then
-    local propSlip = mode == "grip" and propSlipMax or max(0, propSlipWeighted)
-    local slipExcess = propSlip * (looseGround and 0.8 or 1)
-    local tcsCoef = max(0.05, speed - slipExcess * slipExcess) / speed
-    electrics.values.throttleOverride = input.throttle * smoothTcs:get(tcsCoef, dt)
-    -- electrics.values.throttleOverride = input.throttle * tcsCoef
+    electrics.values.throttleOverride = input.throttle * smoothTcs:get(propModelCoef, dt)
     wroteThrottle = true
   elseif wroteThrottle then
     electrics.values.throttleOverride = nil
