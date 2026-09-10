@@ -1,11 +1,17 @@
 -- Universal ABS/TCS: virtual driving aid
 -- Limits the player's brake/throttle inputs to avoid wheel lock (braking) and wheel spin (acceleration)
 -- Works on any vehicle, regardless of its native ABS/TCS/ESC configuration
--- Algorithm and tuning copied from the native AI (lua/vehicle/ai.lua, ~l.525)
+-- Global reference-slip controller: one pedal command, load-weighted wheel feedback.
 
 local M = {}
 
 local min, max, abs = math.min, math.max, math.abs
+local lowSpeedReference = 1.5
+
+local function getSlipCoef(slipRatio, targetSlipRatio)
+  if targetSlipRatio <= 0 then return slipRatio <= 0 and 1 or 0 end
+  return slipRatio > targetSlipRatio and targetSlipRatio / slipRatio or 1
+end
 
 local absEnabled = false
 local tcsEnabled = false
@@ -44,6 +50,7 @@ local function updateGFX(dt)
   local vx, vy, vz = obj:getSmoothRefVelocityXYZ()
   local dx, dy, dz = obj:getDirectionVectorXYZ()
   local speed = abs(vx * dx + vy * dy + vz * dz)
+  local slipReferenceSpeed = max(speed, lowSpeedReference)
 
   -- if loose ground -> reduce grip and adjust TCS behavior
   local looseGround = obj:getStaticFrictionCoef() < 0.9
@@ -63,11 +70,12 @@ local function updateGFX(dt)
     if not wd.isBroken then
       local downForce = max(wd.downForceRaw or 0, 0)
       local wheelSpeed = abs(wd.wheelSpeed or 0)
-      local peakSlipRatio = wd.slipRatioTarget or 0.18
-      local brakeTargetSpeed = speed * max(0, 1 - peakSlipRatio)
-      local driveTargetSpeed = speed * (1 + peakSlipRatio * (looseGround and 1.25 or 1))
-      local brakeCoef = min(1, wheelSpeed / brakeTargetSpeed)
-      local propCoef = min(1, driveTargetSpeed / wheelSpeed)
+      local peakSlipRatio = min(max(wd.slipRatioTarget or 0.18, 0.01), 0.95)
+      local brakeSlipRatio = max(0, (speed - wheelSpeed) / slipReferenceSpeed)
+      local driveSlipRatio = max(0, (wheelSpeed - speed) / slipReferenceSpeed)
+      local driveTargetSlipRatio = min(peakSlipRatio * (looseGround and 1.25 or 1), 0.95)
+      local brakeCoef = getSlipCoef(brakeSlipRatio, peakSlipRatio)
+      local propCoef = getSlipCoef(driveSlipRatio, driveTargetSlipRatio)
 
       brakeCoefWeighted = brakeCoefWeighted + brakeCoef * downForce
       totalDownForce = totalDownForce + downForce
