@@ -52,9 +52,6 @@ local function updateGFX(dt)
   local speed = abs(vx * dx + vy * dy + vz * dz)
   local slipReferenceSpeed = max(speed, lowSpeedReference)
 
-  -- if loose ground -> reduce grip and adjust TCS behavior
-  local looseGround = obj:getStaticFrictionCoef() < 0.9
-
   -- wheel scan
   local brakeCoefWeighted = 0
   local totalDownForce = 0
@@ -70,10 +67,10 @@ local function updateGFX(dt)
     if not wd.isBroken then
       local downForce = max(wd.downForceRaw or 0, 0)
       local wheelSpeed = abs(wd.wheelSpeed or 0)
-      local peakSlipRatio = min(max(wd.slipRatioTarget or 0.18, 0.01), 0.95)
+      local peakSlipRatio = min(max(wd.slipRatioTarget or 0.18, 0), 1)
       local brakeSlipRatio = max(0, (speed - wheelSpeed) / slipReferenceSpeed)
       local driveSlipRatio = max(0, (wheelSpeed - speed) / slipReferenceSpeed)
-      local driveTargetSlipRatio = min(peakSlipRatio * (looseGround and 1.25 or 1), 0.95)
+      local driveTargetSlipRatio = min(peakSlipRatio, 1)
       local brakeCoef = getSlipCoef(brakeSlipRatio, peakSlipRatio)
       local propCoef = getSlipCoef(driveSlipRatio, driveTargetSlipRatio)
 

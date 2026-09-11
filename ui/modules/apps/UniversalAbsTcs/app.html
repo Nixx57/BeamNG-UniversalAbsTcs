@@ -11,11 +11,11 @@
   <div class="universal-abs-tcs-option universal-abs-tcs-mode">
     <span>Mode</span>
     <label>
-      <input type="radio" name="uatMode" value="performance" ng-model="mode" ng-change="setMode()" />
+      <input type="radio" name="uatMode" value="performance" ng-model="mode" ng-change="setMode()" title="Uses load-weighted wheel feedback to maximize overall braking and traction." />
       <span>Performance</span>
     </label>
     <label>
-      <input type="radio" name="uatMode" value="grip" ng-model="mode" ng-change="setMode()" />
+      <input type="radio" name="uatMode" value="grip" ng-model="mode" ng-change="setMode()" title="Uses the wheel with the least grip to maximize stability and prevent wheel slip." />
       <span>Grip</span>
     </label>
   </div>
