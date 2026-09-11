@@ -1,22 +1,128 @@
-<div class="bngApp universal-abs-tcs-app">
-  <link rel="stylesheet" type="text/css" href="/ui/modules/apps/UniversalAbsTcs/app.css" />
-  <label class="universal-abs-tcs-option">
-    <input type="checkbox" ng-model="absEnabled" ng-change="setAbsEnabled()" />
-    <span>Universal ABS</span>
-  </label>
-  <label class="universal-abs-tcs-option">
-    <input type="checkbox" ng-model="tcsEnabled" ng-change="setTcsEnabled()" />
-    <span>Universal TCS</span>
-  </label>
-  <div class="universal-abs-tcs-option universal-abs-tcs-mode">
-    <span>Mode</span>
-    <label>
-      <input type="radio" name="uatMode" value="performance" ng-model="mode" ng-change="setMode()" title="Uses load-weighted wheel feedback to maximize overall braking and traction." />
-      <span>Performance</span>
-    </label>
-    <label>
-      <input type="radio" name="uatMode" value="grip" ng-model="mode" ng-change="setMode()" title="Uses the wheel with the least grip to maximize stability and prevent wheel slip." />
-      <span>Grip</span>
-    </label>
-  </div>
-</div>
+<svg
+   xmlns="http://www.w3.org/2000/svg"
+   width="100%"
+   height="100%"
+   viewBox="0 0 254 200"
+   preserveAspectRatio="xMidYMid meet"
+   version="1.1"
+   style="width:100%; height:100%;">
+  <style>
+    @font-face {
+      font-family: Digital;
+      src: url(/ui/common/Segment7Standard.otf);
+    }
+    .uat-btn-bg {
+      fill: #434343;
+      stroke: #000000;
+      stroke-width: 1.2px;
+      cursor: pointer;
+      transition: fill 0.15s ease;
+    }
+    .uat-btn-bg:hover {
+      fill: #525252;
+    }
+    .uat-btn-bg:active {
+      fill: #333333;
+    }
+    .uat-arrow-btn {
+      fill: #434343;
+      stroke: #000000;
+      stroke-width: 1.2px;
+      cursor: pointer;
+      transition: fill 0.15s ease;
+    }
+    .uat-arrow-btn:hover {
+      fill: #FF6600;
+    }
+    .uat-arrow-btn:active {
+      fill: #D55200;
+    }
+    .uat-text-active {
+      fill: #FF6600;
+      transition: fill 0.15s ease;
+    }
+    .uat-text-inactive {
+      fill: #949494;
+      transition: fill 0.15s ease;
+    }
+    .uat-led-active {
+      fill: #FF6600;
+      transition: fill 0.15s ease;
+    }
+    .uat-led-inactive {
+      fill: #222222;
+      transition: fill 0.15s ease;
+    }
+  </style>
+
+  <!-- Mode + Arrows -->
+  <g id="mode_section">
+    <!-- Arrow Left -->
+    <g id="prev_mode_btn" ng-click="toggleMode()" style="cursor: pointer">
+      <path d="M 40,36 L 14,60 L 40,84 Z" class="uat-arrow-btn" />
+    </g>
+
+    <!-- Mode Display -->
+    <g id="lcd_screen">
+      <rect x="48" y="16" width="158" height="88" rx="8" ry="8" fill="#151515" stroke="#000000" stroke-width="1.5" />
+      <rect x="51" y="19" width="152" height="82" rx="6" ry="6" fill="#1e1e1e" stroke="#2d2d2d" stroke-width="1" />
+
+      <!-- LCD Label "MODE" -->
+      <text
+         x="127"
+         y="38"
+         text-anchor="middle"
+         font-family="Roboto, sans-serif"
+         font-size="12px"
+         font-weight="bold"
+         fill="#777777"
+         letter-spacing="2">MODE</text>
+
+      <!-- Mode Display -->
+      <text
+         x="127"
+         y="76"
+         text-anchor="middle"
+         font-family="Roboto, sans-serif"
+         font-size="19px"
+         font-weight="900"
+         fill="#FF6600"
+         letter-spacing="1">{{ (mode || 'PERFORMANCE') | uppercase }}</text>
+    </g>
+
+    <!-- Right Arrow -->
+    <g id="next_mode_btn" ng-click="toggleMode()" style="cursor: pointer">
+      <path d="M 214,36 L 240,60 L 214,84 Z" class="uat-arrow-btn" />
+    </g>
+  </g>
+
+  <!-- ABS -->
+  <g id="abs_btn" ng-click="toggleAbs()" style="cursor: pointer">
+    <rect x="14" y="116" width="108" height="72" rx="8" ry="8" class="uat-btn-bg" />
+    <!-- Statbar -->
+    <rect x="24" y="124" width="88" height="5" rx="2" ry="2" ng-class="absEnabled ? 'uat-led-active' : 'uat-led-inactive'" />
+    <text
+       x="68"
+       y="167"
+       text-anchor="middle"
+       font-family="Roboto, sans-serif"
+       font-size="32px"
+       font-weight="900"
+       ng-class="absEnabled ? 'uat-text-active' : 'uat-text-inactive'">ABS</text>
+  </g>
+
+  <!-- TCS -->
+  <g id="tcs_btn" ng-click="toggleTcs()" style="cursor: pointer">
+    <rect x="132" y="116" width="108" height="72" rx="8" ry="8" class="uat-btn-bg" />
+    <!-- Statbar -->
+    <rect x="142" y="124" width="88" height="5" rx="2" ry="2" ng-class="tcsEnabled ? 'uat-led-active' : 'uat-led-inactive'" />
+    <text
+       x="186"
+       y="167"
+       text-anchor="middle"
+       font-family="Roboto, sans-serif"
+       font-size="32px"
+       font-weight="900"
+       ng-class="tcsEnabled ? 'uat-text-active' : 'uat-text-inactive'">TCS</text>
+  </g>
+</svg>

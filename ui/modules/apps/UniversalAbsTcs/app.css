@@ -1,20 +1,7 @@
-.universal-abs-tcs-app {
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+universal-abs-tcs,
+universal-abs-tcs > svg {
+  width: 100%;
   height: 100%;
-  overflow-y: auto;
-  padding: 10px;
-}
-
-.universal-abs-tcs-option {
-  align-items: center;
-  cursor: pointer;
-  display: flex;
-  gap: 10px;
-}
-
-.universal-abs-tcs-option input {
-  margin: 0;
+  background: transparent !important;
+  background-color: transparent !important;
 }
