@@ -5,6 +5,9 @@
   "description": "Virtual ABS/TCS driving aid that works on any vehicle.",
   "directive": "universalAbsTcs",
   "domElement": "<universal-abs-tcs></universal-abs-tcs>",
+  "types": [
+    "ui.apps.categories.vehicle_control"
+  ],
   "css": {
     "width": "140px",
     "height": "110px",
