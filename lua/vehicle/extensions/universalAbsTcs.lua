@@ -1,121 +1,87 @@
 -- Universal ABS/TCS: virtual driving aid
 -- Limits the player's brake/throttle inputs to avoid wheel lock (braking) and wheel spin (acceleration)
 -- Works on any vehicle, regardless of its native ABS/TCS/ESC configuration
--- Global reference-slip controller: one pedal command, load-weighted wheel feedback.
-
+-- Algorithm and tuning copied from the native AI (lua/vehicle/ai.lua, ~l.525)
 local M = {}
 
 local min, max, abs = math.min, math.max, math.abs
-local lowSpeedReference = 3
-local tolerance = 100
-
-local function getSlipCoef(slipRatio, targetSlipRatio)
-  targetSlipRatio = targetSlipRatio * (tolerance / 100)
-  if targetSlipRatio <= 0 then return slipRatio <= 0 and 1 or 0 end
-  return slipRatio > targetSlipRatio and targetSlipRatio / slipRatio or 1
-end
 
 local absEnabled = false
 local tcsEnabled = false
-local wroteBrake = false
-local wroteThrottle = false
-local mode = "performance" -- "performance" (load-weighted average, maximizes braking/traction) or "grip" (worst wheel, maximizes stability)
--- local smoothTcs = newTemporalSmoothingNonLinear(0.4, 0.9, 1) -- native AI tuning
-local smoothAbs = newTemporalSmoothing(math.huge, 2, nil, 1) -- instant cut, progressive recovery
-local smoothTcs = newTemporalSmoothing(math.huge, 2, nil, 1) -- instant cut, progressive recovery
+local smoothTcs = newTemporalSmoothingNonLinear(0.4, 0.9, 1) -- native AI tuning
 
 local function setEnabled(absOn, tcsOn)
-  absEnabled = absOn == true
-  tcsEnabled = tcsOn == true
-  if not absEnabled and wroteBrake then
-    electrics.values.brakeOverride = nil
-    wroteBrake = false
-  end
-  if not tcsEnabled and wroteThrottle then
-    electrics.values.throttleOverride = nil
-    wroteThrottle = false
-  end
-  smoothAbs:set(1)
-  smoothTcs:set(1)
-end
-
-local function setMode(newMode)
-  if newMode == "grip" or newMode == "performance" then
-    mode = newMode
-  end
+    absEnabled = absOn == true
+    tcsEnabled = tcsOn == true
+    if not absEnabled then
+        electrics.values.brakeOverride = nil
+    end
+    if not tcsEnabled then
+        electrics.values.throttleOverride = nil
+    end
+    smoothTcs:set(1)
 end
 
 local function updateGFX(dt)
-  if not (absEnabled or tcsEnabled) then return end
-
-  -- longitudinal vehicle speed, same source as ai.lua (refactored)
-  local vx, vy, vz = obj:getSmoothRefVelocityXYZ()
-  local dx, dy, dz = obj:getDirectionVectorXYZ()
-  local speed = abs(vx * dx + vy * dy + vz * dz)
-  local slipReferenceSpeed = max(speed, lowSpeedReference)
-
-  -- wheel scan
-  local brakeCoefWeighted = 0
-  local totalDownForce = 0
-  local brakeCoefGrip = 1
-  local propCoefWeighted = 0
-  local propCoefSum = 0
-  local propCoefGrip = 1
-  local propDownForce = 0
-  local propWheelCount = 0
-  local lwheels = wheels.wheels
-  for i = 0, tableSizeC(lwheels) - 1 do
-    local wd = lwheels[i]
-    if not wd.isBroken then
-      local downForce = max(wd.downForceRaw or 0, 0)
-      local wheelSpeed = abs(wd.wheelSpeed or 0)
-      local peakSlipRatio = min(max(wd.slipRatioTarget or 0.18, 0), 1)
-      local brakeSlipRatio = max(0, (speed - wheelSpeed) / slipReferenceSpeed)
-      local driveSlipRatio = max(0, (wheelSpeed - speed) / slipReferenceSpeed)
-      local driveTargetSlipRatio = min(peakSlipRatio, 1)
-      local brakeCoef = getSlipCoef(brakeSlipRatio, peakSlipRatio)
-      local propCoef = getSlipCoef(driveSlipRatio, driveTargetSlipRatio)
-
-      if wd.brakeTorque > 0 then
-        brakeCoefWeighted = brakeCoefWeighted + brakeCoef * downForce
-        totalDownForce = totalDownForce + downForce
-        brakeCoefGrip = min(brakeCoefGrip, brakeCoef)
-      end
-
-      if wd.isPropulsed then
-        propCoefWeighted = propCoefWeighted + propCoef * downForce
-        propCoefSum = propCoefSum + propCoef
-        propDownForce = propDownForce + downForce
-        propWheelCount = propWheelCount + 1
-        propCoefGrip = min(propCoefGrip, propCoef)
-      end
+    if not (absEnabled or tcsEnabled) then
+        return
     end
-  end
-  local brakeModelCoef = totalDownForce > 0 and (mode == "grip" and brakeCoefGrip or brakeCoefWeighted / totalDownForce) or 0
-  local propNoLoadCoef = propWheelCount > 0 and (mode == "grip" and propCoefGrip or propCoefSum / propWheelCount) or 1
-  local propModelCoef = propDownForce > 0 and (mode == "grip" and propCoefGrip or propCoefWeighted / propDownForce) or propNoLoadCoef
 
-  -- ABS
-  if absEnabled and input.brake > 0 then
-    electrics.values.brakeOverride = input.brake * smoothAbs:get(brakeModelCoef, dt)
-    wroteBrake = true
-  elseif wroteBrake then
-    electrics.values.brakeOverride = nil
-    wroteBrake = false
-  end
+    local ego = {
+        dirVec = obj:getDirectionVector(),
+        vel = vec3(obj:getSmoothRefVelocityXYZ()),
+    }
 
-  -- TCS
-  if tcsEnabled and input.throttle > 0 then
-    electrics.values.throttleOverride = input.throttle * smoothTcs:get(propModelCoef, dt)
-    wroteThrottle = true
-  elseif wroteThrottle then
-    electrics.values.throttleOverride = nil
-    wroteThrottle = false
-  end
+    local dirVel = ego.vel:dot(ego.dirVec)
+    local absegoSpeed = abs(dirVel)
+
+    -- wheel speed
+    local throttleTcsCoef = 1
+    local brakeABSCoef = 1
+    if absegoSpeed > 0.05 then
+        if sensors.gz <= 0.1 then
+            local totalSlip = 0
+            local propSlip = 0
+            local totalDownForce = 0
+            local lwheels = wheels.wheels
+            for i = 0, tableSizeC(lwheels) - 1 do
+                local wd = lwheels[i]
+                if not wd.isBroken then
+                    local lastSlip = wd.lastSlip
+                    local downForce = wd.downForceRaw
+                    totalSlip = totalSlip + lastSlip * downForce
+                    totalDownForce = totalDownForce + downForce
+                    if wd.isPropulsed then
+                        propSlip = max(propSlip, lastSlip)
+                    end
+                end
+            end
+
+            absegoSpeed = max(absegoSpeed, 3)
+
+            totalSlip = totalSlip / (totalDownForce + 1e-25)
+
+            -- abs
+            brakeABSCoef = min(1, 1.5 * square(square(square(max(0, absegoSpeed - totalSlip) / absegoSpeed))))
+
+            -- tcs
+            propSlip = propSlip * ((obj:getStaticFrictionCoef() < 0.9) and 0.8 or 1)
+            local tcsCoef = max(0.05, absegoSpeed - propSlip * propSlip) / absegoSpeed
+            throttleTcsCoef = smoothTcs:get(tcsCoef, dt)
+        else
+            brakeABSCoef = 0
+            throttleTcsCoef = 0
+        end
+    end
+    if tcsEnabled then
+        electrics.values.throttleOverride = min(input.throttle, throttleTcsCoef)
+    end
+    if absEnabled then
+        electrics.values.brakeOverride = min(input.brake, brakeABSCoef)
+    end
 end
 
 M.setEnabled = setEnabled
-M.setMode = setMode
 M.updateGFX = updateGFX
 
 return M
