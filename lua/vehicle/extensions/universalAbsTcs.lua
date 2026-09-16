@@ -7,8 +7,10 @@ local M = {}
 
 local min, max, abs = math.min, math.max, math.abs
 local lowSpeedReference = 3
+local tolerance = 100
 
 local function getSlipCoef(slipRatio, targetSlipRatio)
+  targetSlipRatio = targetSlipRatio * (tolerance / 100)
   if targetSlipRatio <= 0 then return slipRatio <= 0 and 1 or 0 end
   return slipRatio > targetSlipRatio and targetSlipRatio / slipRatio or 1
 end
