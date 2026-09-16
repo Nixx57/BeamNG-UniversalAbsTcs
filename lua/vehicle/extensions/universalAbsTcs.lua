@@ -6,7 +6,7 @@
 local M = {}
 
 local min, max, abs = math.min, math.max, math.abs
-local lowSpeedReference = 1.5
+local lowSpeedReference = 3
 
 local function getSlipCoef(slipRatio, targetSlipRatio)
   if targetSlipRatio <= 0 then return slipRatio <= 0 and 1 or 0 end
@@ -74,9 +74,11 @@ local function updateGFX(dt)
       local brakeCoef = getSlipCoef(brakeSlipRatio, peakSlipRatio)
       local propCoef = getSlipCoef(driveSlipRatio, driveTargetSlipRatio)
 
-      brakeCoefWeighted = brakeCoefWeighted + brakeCoef * downForce
-      totalDownForce = totalDownForce + downForce
-      brakeCoefGrip = min(brakeCoefGrip, brakeCoef)
+      if wd.brakeTorque > 0 then
+        brakeCoefWeighted = brakeCoefWeighted + brakeCoef * downForce
+        totalDownForce = totalDownForce + downForce
+        brakeCoefGrip = min(brakeCoefGrip, brakeCoef)
+      end
 
       if wd.isPropulsed then
         propCoefWeighted = propCoefWeighted + propCoef * downForce
