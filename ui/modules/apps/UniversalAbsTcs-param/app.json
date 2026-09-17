@@ -1,0 +1,21 @@
+{
+  "name": "Universal ABS/TCS - Advanced parameters",
+  "author": "Nixx",
+  "version": "0.5.1",
+  "description": "Advanced tuning for Universal ABS/TCS",
+  "directive": "universalAbsTcsParams",
+  "domElement": "<universal-abs-tcs-params></universal-abs-tcs-params>",
+  "types": [
+    "ui.apps.categories.vehicle_control"
+  ],
+  "css": {
+    "width": "275px",
+    "height": "170px",
+    "top": "200px",
+    "left": "200px"
+  },
+  "preserveAspectRatio": false,
+  "category": "Dashboard",
+  "isAuxiliary": false,
+  "interactive": "yes"
+}

@@ -6,20 +6,26 @@
 local M = {}
 
 local min, max, abs = math.min, math.max, math.abs
-local lowSpeedReference = 3
-local tolerance = 100
+local mode = "performance" -- "performance" (load-weighted average, maximizes braking/traction) or "grip" (worst wheel, maximizes stability)
+local lowSpeedReference = 5
+local tolerance = "default"
+local anticipationTime = 0.05 -- default: 50ms
+local aggressivity = 2.0 -- 1.5 à 2.5
 
-local function getSlipCoef(slipRatio, targetSlipRatio)
-  targetSlipRatio = targetSlipRatio * (tolerance / 100)
+local function getSlipCoef(slipRatio, targetSlipRatio, aggressivity)
+  targetSlipRatio = targetSlipRatio * ((tolerance == "default" and (obj:getStaticFrictionCoef() < 0.9 and 120 or 100) or tolerance) / 100)
   if targetSlipRatio <= 0 then return slipRatio <= 0 and 1 or 0 end
-  return slipRatio > targetSlipRatio and targetSlipRatio / slipRatio or 1
+  if slipRatio <= targetSlipRatio then return 1 end
+
+  aggressivity = aggressivity or 2.0
+  local ratio = targetSlipRatio / slipRatio
+  return ratio ^ aggressivity
 end
 
 local absEnabled = false
 local tcsEnabled = false
 local wroteBrake = false
 local wroteThrottle = false
-local mode = "performance" -- "performance" (load-weighted average, maximizes braking/traction) or "grip" (worst wheel, maximizes stability)
 -- local smoothTcs = newTemporalSmoothingNonLinear(0.4, 0.9, 1) -- native AI tuning
 local smoothAbs = newTemporalSmoothing(math.huge, 2, nil, 1) -- instant cut, progressive recovery
 local smoothTcs = newTemporalSmoothing(math.huge, 2, nil, 1) -- instant cut, progressive recovery
@@ -45,6 +51,32 @@ local function setMode(newMode)
   end
 end
 
+local function setParameters(lowSpeedReferenceValue, toleranceValue, anticipationTimeValue, aggressivityValue)
+  if type(lowSpeedReferenceValue) ~= "number"
+      or type(anticipationTimeValue) ~= "number"
+      or type(aggressivityValue) ~= "number" then
+    return false
+  end
+  if toleranceValue ~= "default" and type(toleranceValue) ~= "number" then
+    return false
+  end
+
+  lowSpeedReference = max(lowSpeedReferenceValue, 0)
+  tolerance = toleranceValue
+  anticipationTime = max(anticipationTimeValue, 0)
+  aggressivity = max(aggressivityValue, 0)
+  return true
+end
+
+local function getParameters()
+  return {
+    lowSpeedReference = lowSpeedReference,
+    tolerance = tolerance,
+    anticipationTime = anticipationTime,
+    aggressivity = aggressivity,
+  }
+end
+
 local function updateGFX(dt)
   if not (absEnabled or tcsEnabled) then return end
 
@@ -63,6 +95,7 @@ local function updateGFX(dt)
   local propCoefGrip = 1
   local propDownForce = 0
   local propWheelCount = 0
+  local dtInv = dt > 0 and (1 / dt) or 0
   local lwheels = wheels.wheels
   for i = 0, tableSizeC(lwheels) - 1 do
     local wd = lwheels[i]
@@ -70,11 +103,16 @@ local function updateGFX(dt)
       local downForce = max(wd.downForceRaw or 0, 0)
       local wheelSpeed = abs(wd.wheelSpeed or 0)
       local peakSlipRatio = min(max(wd.slipRatioTarget or 0.18, 0), 1)
-      local brakeSlipRatio = max(0, (speed - wheelSpeed) / slipReferenceSpeed)
-      local driveSlipRatio = max(0, (wheelSpeed - speed) / slipReferenceSpeed)
+      local radius = wd.radius or wd.dynamicRadius
+      local lastAngVel = wd.lastAngularVelocity or wd.angularVelocity or 0
+      local angAccel = (wd.angularVelocity - lastAngVel) * dtInv
+      local wheelAccel = angAccel * radius -- m/s²
+      local predictedWheelSpeed = max(0, wheelSpeed + wheelAccel * anticipationTime)
+      local brakeSlipRatio = max(0, (speed - predictedWheelSpeed) / slipReferenceSpeed)
+      local driveSlipRatio = max(0, (predictedWheelSpeed - speed) / slipReferenceSpeed)
       local driveTargetSlipRatio = min(peakSlipRatio, 1)
-      local brakeCoef = getSlipCoef(brakeSlipRatio, peakSlipRatio)
-      local propCoef = getSlipCoef(driveSlipRatio, driveTargetSlipRatio)
+      local brakeCoef = getSlipCoef(brakeSlipRatio, peakSlipRatio, aggressivity)
+      local propCoef = getSlipCoef(driveSlipRatio, driveTargetSlipRatio, aggressivity)
 
       if wd.brakeTorque > 0 then
         brakeCoefWeighted = brakeCoefWeighted + brakeCoef * downForce
@@ -116,6 +154,8 @@ end
 
 M.setEnabled = setEnabled
 M.setMode = setMode
+M.setParameters = setParameters
+M.getParameters = getParameters
 M.updateGFX = updateGFX
 
 return M

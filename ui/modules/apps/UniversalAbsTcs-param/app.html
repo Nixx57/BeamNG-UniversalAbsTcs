@@ -1,0 +1,29 @@
+<div class="bngApp">
+    <div>
+        <button title="Reset to default" ng-click="reset()">Reset to default</button>
+    </div>
+
+    <div>
+        <div>
+            <span>Minimum Speed (km/h):</span>
+            <input type="number" min="0" max="360" step="0.5" ng-model="lowSpeedReference" required>
+        </div>
+
+        <div>
+            <label><input type="checkbox" ng-model="bCustomTolerance" ng-change="toggleCustomTolerance()" aria-label="Custom Tolerance">Custom Tolerance</label>
+            <input type="number" min="0" max="1000" step="1.0" ng-model="tolerance" ng-disabled="!bCustomTolerance" required>
+        </div>
+
+        
+        <div>
+            <span>Anticipation Time (s):</span>
+            <input type="number" min="0" max="2" step="0.01" ng-model="anticipationTime" required>
+        </div>
+
+        <div>
+            <span>Aggressivity:</span>
+            <input type="number" min="0" max="10" step="0.1" ng-model="aggressivity" required>
+        </div>
+    </div>
+  <button title="Apply" ng-click="apply()">Apply</button>
+</div>
