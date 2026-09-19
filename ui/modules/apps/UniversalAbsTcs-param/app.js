@@ -10,8 +10,6 @@
                 scope: true,
                 link: function (scope) {
                     var defaultTolerance = 100
-                    var mpsToKmh = 3.6
-                    var kmhToMps = 1 / 3.6
                     var defaults = {
                         lowSpeedReference: 5,
                         tolerance: 'default',
@@ -28,7 +26,7 @@
 
                     function setScopeValues (values) {
                         values = values || defaults
-                        scope.lowSpeedReference = Number(values.lowSpeedReference) * mpsToKmh
+                        scope.lowSpeedReference = Number(values.lowSpeedReference)
                         scope.bCustomTolerance = values.tolerance !== 'default'
                         scope.tolerance = scope.bCustomTolerance ? Number(values.tolerance) : 'default'
                         scope.anticipationTime = Number(values.anticipationTime)
@@ -52,7 +50,7 @@
                         var tolerance = scope.bCustomTolerance
                             ? getNumber(scope.tolerance, defaultTolerance)
                             : 'default'
-                        var lowSpeedReferenceMps = getNumber(scope.lowSpeedReference * kmhToMps, defaults.lowSpeedReference)
+                        var lowSpeedReferenceMps = getNumber(scope.lowSpeedReference, defaults.lowSpeedReference)
                         return 'setParameters(' +
                             lowSpeedReferenceMps + ',' +
                             JSON.stringify(tolerance) + ',' +
