@@ -1,4 +1,4 @@
--- Universal ABS/TCS: virtual driving aid
+-- Smart Throttle & Brake Assistant: virtual driving aid
 -- Limits the player's brake/throttle inputs to avoid wheel lock (braking) and wheel spin (acceleration)
 -- Works on any vehicle, regardless of its native ABS/TCS/ESC configuration
 -- Global reference-slip controller: one pedal command, load-weighted wheel feedback.
@@ -18,6 +18,9 @@ local function getSlipCoef(slipRatio, targetSlipRatio, aggressivity)
   if slipRatio <= targetSlipRatio then return 1 end
 
   aggressivity = aggressivity or 2.0
+  --   -- native revLimiterSoftMethod: linear ramp to 0 over a fixed overshoot range, no exponent
+  -- local overshootRange = targetSlipRatio * aggressivity
+  -- return 1 - min(slipRatio - targetSlipRatio, overshootRange) / overshootRange
   local ratio = targetSlipRatio / slipRatio
   return ratio ^ aggressivity
 end

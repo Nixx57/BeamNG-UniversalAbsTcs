@@ -1,13 +1,13 @@
-# Universal ABS/TCS
+# Smart Throttle & Brake Assistant
 
-Virtual ABS/TCS driving aid that works on **any vehicle**, regardless of its native
+Smart throttle and brake assistance that works on **any vehicle**, regardless of its native
 ABS/TCS/ESC configuration. It caps the player's brake/throttle input to limit wheel
 lock and wheel spin.
 **This is a mod with a minimal implementation (POC)**, the basic logic is copied from **ai.lua**. 
 It's imperfect, but works fairly well in most situations.
 
 ## Usage
-- Open the "Universal ABS/TCS" app (GuiApp) from the app menu and toggle ABS/TCS.
+- Open the "Smart Throttle & Brake Assistant" app (GuiApp) from the app menu and toggle ABS/TCS.
 - Or from the console / another mod:
   ```lua
   extensions.load('universalAbsTcs')

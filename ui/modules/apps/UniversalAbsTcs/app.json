@@ -1,8 +1,8 @@
 {
-  "name": "Universal ABS/TCS",
+  "name": "Smart Throttle & Brake Assistant",
   "author": "Nixx",
   "version": "0.5.1",
-  "description": "Virtual ABS/TCS driving aid that works on any vehicle.",
+  "description": "Smart throttle and brake assistance that works on any vehicle.",
   "directive": "universalAbsTcs",
   "domElement": "<universal-abs-tcs></universal-abs-tcs>",
   "types": [

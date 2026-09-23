@@ -1,8 +1,8 @@
 {
-  "name": "Universal ABS/TCS - Advanced parameters",
+  "name": "Smart Throttle & Brake Assistant - Advanced parameters",
   "author": "Nixx",
-  "version": "0.6",
-  "description": "Advanced tuning for Universal ABS/TCS",
+  "version": "0.7",
+  "description": "Advanced tuning for Smart Throttle & Brake Assistant",
   "directive": "universalAbsTcsParams",
   "domElement": "<universal-abs-tcs-params></universal-abs-tcs-params>",
   "types": [

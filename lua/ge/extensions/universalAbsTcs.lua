@@ -77,7 +77,7 @@ local function setEnabled(absOn, tcsOn)
     if not applyToVehicle(playerVeh, absEnabled, tcsEnabled) then return false end
     if not applyParametersToVehicle(playerVeh) then return false end
 
-    ui_message((absEnabled and tcsEnabled) and "Universal ABS / TCS enabled." or "Universal ABS / TCS disabled.", 5, "info")
+    ui_message((absEnabled and tcsEnabled) and "Smart Throttle & Brake Assistant enabled." or "Smart Throttle & Brake Assistant disabled.", 5, "info")
     return true
 end
 
