@@ -28,7 +28,7 @@
                         values = values || defaults
                         scope.lowSpeedReference = Number(values.lowSpeedReference)
                         scope.bCustomTolerance = values.tolerance !== 'default'
-                        scope.tolerance = scope.bCustomTolerance ? Number(values.tolerance) : 'default'
+                        scope.tolerance = scope.bCustomTolerance ? Number(values.tolerance) : defaultTolerance
                         scope.anticipationTime = Number(values.anticipationTime)
                         scope.aggressivity = Number(values.aggressivity)
                     }
@@ -59,7 +59,9 @@
                     }
 
                     scope.toggleCustomTolerance = function () {
-                        scope.tolerance = scope.bCustomTolerance ? defaultTolerance : 'default'
+                        if (!isFinite(Number(scope.tolerance))) {
+                            scope.tolerance = defaultTolerance
+                        }
                     }
 
                     scope.apply = function () {

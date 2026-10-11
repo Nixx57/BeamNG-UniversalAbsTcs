@@ -6,7 +6,7 @@
 local M = {}
 
 local min, max, abs = math.min, math.max, math.abs
-local mode = "performance" -- "performance" (load-weighted average, maximizes braking/traction) or "grip" (worst wheel, maximizes stability)
+local mode = "performance" -- "performance" (load-weighted average), "grip" (worst wheel), or "legacy" (native AI controller)
 local lowSpeedReference = 5
 local tolerance = "default"
 local anticipationTime = 0.05 -- default: 50ms
@@ -29,9 +29,24 @@ local absEnabled = false
 local tcsEnabled = false
 local wroteBrake = false
 local wroteThrottle = false
--- local smoothTcs = newTemporalSmoothingNonLinear(0.4, 0.9, 1) -- native AI tuning
+local legacyTcs = newTemporalSmoothingHybrid(0.4, 0.9, 1, 0.01) -- native AI tuning + minimum rate
 local smoothAbs = newTemporalSmoothing(math.huge, 2, nil, 1) -- instant cut, progressive recovery
 local smoothTcs = newTemporalSmoothing(math.huge, 2, nil, 1) -- instant cut, progressive recovery
+local legacy
+
+local function clearOverrides()
+  if wroteBrake then
+    electrics.values.brakeOverride = nil
+    wroteBrake = false
+  end
+  if wroteThrottle then
+    electrics.values.throttleOverride = nil
+    wroteThrottle = false
+  end
+  smoothAbs:set(1)
+  smoothTcs:set(1)
+  legacyTcs:set(1)
+end
 
 local function setEnabled(absOn, tcsOn)
   absEnabled = absOn == true
@@ -46,12 +61,16 @@ local function setEnabled(absOn, tcsOn)
   end
   smoothAbs:set(1)
   smoothTcs:set(1)
+  legacyTcs:set(1)
 end
 
 local function setMode(newMode)
-  if newMode == "grip" or newMode == "performance" then
+  if newMode == "grip" or newMode == "performance" or newMode == "legacy" then
     mode = newMode
+    clearOverrides()
+    return true
   end
+  return false
 end
 
 local function setParameters(lowSpeedReferenceValue, toleranceValue, anticipationTimeValue, aggressivityValue)
@@ -83,6 +102,16 @@ end
 local function updateGFX(dt)
   if not (absEnabled or tcsEnabled) then return end
 
+  if extensions.ai and extensions.ai.mode and extensions.ai.mode ~= "disabled" then
+    clearOverrides()
+    return
+  end
+
+  if mode == "legacy" then
+    legacy(dt)
+    return
+  end
+
   -- longitudinal vehicle speed, same source as ai.lua (refactored)
   local vx, vy, vz = obj:getSmoothRefVelocityXYZ()
   local dx, dy, dz = obj:getDirectionVectorXYZ()
@@ -103,14 +132,16 @@ local function updateGFX(dt)
   for i = 0, tableSizeC(lwheels) - 1 do
     local wd = lwheels[i]
     if not wd.isBroken then
-      local downForce = max(wd.downForceRaw or 0, 0)
-      local wheelSpeed = abs(wd.wheelSpeed or 0)
+      local downForce = max(wd.downForce or 0, 0)
+      local wheelSpeed = wd.wheelSpeed or 0
       local peakSlipRatio = min(max(wd.slipRatioTarget or 0.18, 0), 1)
-      local radius = wd.radius or wd.dynamicRadius
-      local lastAngVel = wd.lastAngularVelocity or wd.angularVelocity or 0
+      local radius = wd.dynamicRadius or wd.radius
+      local lastAngVel = wd.angularVelocity or 0
       local angAccel = (wd.angularVelocity - lastAngVel) * dtInv
-      local wheelAccel = angAccel * radius -- m/s²
-      local predictedWheelSpeed = max(0, wheelSpeed + wheelAccel * anticipationTime)
+      local wheelAccel = angAccel * wd.wheelDir * radius -- m/s²
+      local wheelAccelMagnitude = wheelSpeed < 0 and -wheelAccel or wheelAccel
+      -- Stop at zero instead of predicting a reversal during wheel lock.
+      local predictedWheelSpeed = max(0, abs(wheelSpeed) + wheelAccelMagnitude * anticipationTime)
       local brakeSlipRatio = max(0, (speed - predictedWheelSpeed) / slipReferenceSpeed)
       local driveSlipRatio = max(0, (predictedWheelSpeed - speed) / slipReferenceSpeed)
       local driveTargetSlipRatio = min(peakSlipRatio, 1)
@@ -155,6 +186,71 @@ local function updateGFX(dt)
   end
 end
 
+legacy = function(dt)
+    local ego = {
+        dirVec = obj:getDirectionVector(),
+        vel = vec3(obj:getSmoothRefVelocityXYZ()),
+    }
+
+    local dirVel = ego.vel:dot(ego.dirVec)
+    local absegoSpeed = abs(dirVel)
+
+    -- wheel speed
+    local throttleTcsCoef = 1
+    local brakeABSCoef = 1
+    if absegoSpeed > 0.05 then
+        if sensors.gz <= 0.1 then
+            local totalSlip = 0
+            local propSlip = 0
+            local totalDownForce = 0
+            local lwheels = wheels.wheels
+            for i = 0, tableSizeC(lwheels) - 1 do
+                local wd = lwheels[i]
+                if not wd.isBroken then
+                    local lastSlip = wd.lastSlip
+                    local downForce = wd.downForceRaw
+                    totalSlip = totalSlip + lastSlip * downForce
+                    totalDownForce = totalDownForce + downForce
+                    if wd.isPropulsed then
+                        propSlip = max(propSlip, lastSlip)
+                    end
+                end
+            end
+
+            absegoSpeed = max(absegoSpeed, 3)
+
+            totalSlip = totalSlip / (totalDownForce + 1e-25)
+
+            -- abs
+            brakeABSCoef = min(1, 1.5 * square(square(square(max(0, absegoSpeed - totalSlip) / absegoSpeed))))
+
+            -- tcs
+            propSlip = propSlip * ((obj:getStaticFrictionCoef() < 0.9) and 0.8 or 1)
+            local tcsCoef = max(0.05, absegoSpeed - propSlip * propSlip) / absegoSpeed
+            if tcsCoef > 0.95 then tcsCoef = 1.0 end -- avoid asymptote value
+            throttleTcsCoef = legacyTcs:get(tcsCoef, dt)
+        else
+            brakeABSCoef = 0
+            throttleTcsCoef = 0
+        end
+    end
+    if tcsEnabled and input.throttle > 0 then
+        electrics.values.throttleOverride = min(input.throttle, throttleTcsCoef)
+        wroteThrottle = true
+    elseif wroteThrottle then
+        electrics.values.throttleOverride = nil
+        wroteThrottle = false
+    end
+    if absEnabled and input.brake > 0 then
+        electrics.values.brakeOverride = min(input.brake, brakeABSCoef)
+        wroteBrake = true
+    elseif wroteBrake then
+        electrics.values.brakeOverride = nil
+        wroteBrake = false
+    end
+end
+
+M.onReset = clearOverrides
 M.setEnabled = setEnabled
 M.setMode = setMode
 M.setParameters = setParameters

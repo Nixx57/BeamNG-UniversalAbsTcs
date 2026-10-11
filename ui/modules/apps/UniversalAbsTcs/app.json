@@ -1,7 +1,7 @@
 {
   "name": "Smart Throttle & Brake Assistant",
   "author": "Nixx",
-  "version": "0.5.1",
+  "version": "1.0",
   "description": "Smart throttle and brake assistance that works on any vehicle.",
   "directive": "universalAbsTcs",
   "domElement": "<universal-abs-tcs></universal-abs-tcs>",

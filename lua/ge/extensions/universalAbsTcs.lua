@@ -110,7 +110,7 @@ local function getStatus()
 end
 
 local function setMode(newMode)
-    if newMode ~= "grip" and newMode ~= "performance" then return false end
+    if newMode ~= "grip" and newMode ~= "performance" and newMode ~= "legacy" then return false end
     if not be or not be.getPlayerVehicle then return false end
     local playerVeh = be:getPlayerVehicle(0)
     if not playerVeh then return false end

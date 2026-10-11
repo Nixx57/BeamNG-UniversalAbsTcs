@@ -145,7 +145,7 @@
                 if (typeof status.tcsEnabled === 'boolean') {
                   scope.tcsEnabled = status.tcsEnabled
                 }
-                if (status.mode === 'grip' || status.mode === 'performance') {
+                if (status.mode === 'grip' || status.mode === 'performance' || status.mode === 'legacy') {
                   scope.mode = status.mode
                 }
               })
@@ -186,7 +186,7 @@
 
           scope.setMode = function (targetMode) {
             var newMode = targetMode || scope.mode
-            var previousMode = newMode === 'grip' ? 'performance' : 'grip'
+            var previousMode = scope.mode
 
             callUniversalAbsTcs('setMode("' + newMode + '")', function (success) {
               scope.$evalAsync(function () {
@@ -208,7 +208,9 @@
           }
 
           scope.toggleMode = function () {
-            var nextMode = scope.mode === 'grip' ? 'performance' : 'grip'
+            var modes = ['performance', 'grip', 'legacy']
+            var currentIndex = modes.indexOf(scope.mode)
+            var nextMode = modes[(currentIndex + 1) % modes.length]
             scope.setMode(nextMode)
           }
 
