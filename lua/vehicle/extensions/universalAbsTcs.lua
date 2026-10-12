@@ -106,10 +106,6 @@ end
 local function updateGFX(dt)
   if not (absEnabled or tcsEnabled) then return end
 
-  if extensions.ai and extensions.ai.mode and extensions.ai.mode ~= "disabled" then
-    return
-  end
-
   if mode == "legacy" then
     legacy(dt)
     return
