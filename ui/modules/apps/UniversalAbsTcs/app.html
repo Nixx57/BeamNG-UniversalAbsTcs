@@ -58,7 +58,7 @@
   <!-- Mode + Arrows -->
   <g id="mode_section">
     <!-- Arrow Left -->
-    <g id="prev_mode_btn" ng-click="toggleMode()" style="cursor: pointer">
+    <g id="prev_mode_btn" ng-click="toggleMode(-1)" style="cursor: pointer">
       <path d="M 40,36 L 14,60 L 40,84 Z" class="uat-arrow-btn" />
     </g>
 
@@ -87,11 +87,11 @@
          font-size="19px"
          font-weight="900"
          fill="#FF6600"
-         letter-spacing="1">{{ (mode || 'PERFORMANCE') | uppercase }}</text>
+         letter-spacing="1">{{ (mode || 'LEGACY') | uppercase }}</text>
     </g>
 
     <!-- Right Arrow -->
-    <g id="next_mode_btn" ng-click="toggleMode()" style="cursor: pointer">
+    <g id="next_mode_btn" ng-click="toggleMode(1)" style="cursor: pointer">
       <path d="M 214,36 L 240,60 L 214,84 Z" class="uat-arrow-btn" />
     </g>
   </g>

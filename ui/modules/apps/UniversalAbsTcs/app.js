@@ -63,7 +63,7 @@
 
   <!-- Mode LCD & Arrow Selectors -->
   <g id="mode_section">
-    <g id="prev_mode_btn" ng-click="toggleMode()" style="cursor: pointer">
+    <g id="prev_mode_btn" ng-click="toggleMode(-1)" style="cursor: pointer">
       <path d="M 40,36 L 14,60 L 40,84 Z" class="uat-arrow-btn" />
     </g>
 
@@ -89,10 +89,10 @@
          font-size="19px"
          font-weight="900"
          fill="#FF6600"
-         letter-spacing="1">{{ (mode || 'PERFORMANCE') | uppercase }}</text>
+         letter-spacing="1">{{ (mode || 'LEGACY') | uppercase }}</text>
     </g>
 
-    <g id="next_mode_btn" ng-click="toggleMode()" style="cursor: pointer">
+    <g id="next_mode_btn" ng-click="toggleMode(1)" style="cursor: pointer">
       <path d="M 214,36 L 240,60 L 214,84 Z" class="uat-arrow-btn" />
     </g>
   </g>
@@ -154,7 +154,7 @@
 
           scope.absEnabled = false
           scope.tcsEnabled = false
-          scope.mode = 'performance'
+          scope.mode = 'legacy'
 
           scope.setAbsEnabled = function (targetState) {
             var enable = targetState !== undefined ? targetState : scope.absEnabled
@@ -207,10 +207,10 @@
             scope.setTcsEnabled(!scope.tcsEnabled)
           }
 
-          scope.toggleMode = function () {
+          scope.toggleMode = function (direction) {
             var modes = ['performance', 'grip', 'legacy']
             var currentIndex = modes.indexOf(scope.mode)
-            var nextMode = modes[(currentIndex + 1) % modes.length]
+            var nextMode = modes[(currentIndex + direction + modes.length) % modes.length]
             scope.setMode(nextMode)
           }
 

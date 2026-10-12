@@ -12,9 +12,7 @@
                     var defaultTolerance = 100
                     var defaults = {
                         lowSpeedReference: 5,
-                        tolerance: 'default',
-                        anticipationTime: 0.05,
-                        aggressivity: 2.0
+                        tolerance: 'default'
                     }
 
                     function callUniversalAbsTcs (expression, callback) {
@@ -29,8 +27,6 @@
                         scope.lowSpeedReference = Number(values.lowSpeedReference)
                         scope.bCustomTolerance = values.tolerance !== 'default'
                         scope.tolerance = scope.bCustomTolerance ? Number(values.tolerance) : defaultTolerance
-                        scope.anticipationTime = Number(values.anticipationTime)
-                        scope.aggressivity = Number(values.aggressivity)
                     }
 
                     function syncCurrentValues () {
@@ -53,9 +49,7 @@
                         var lowSpeedReferenceMps = getNumber(scope.lowSpeedReference, defaults.lowSpeedReference)
                         return 'setParameters(' +
                             lowSpeedReferenceMps + ',' +
-                            JSON.stringify(tolerance) + ',' +
-                            getNumber(scope.anticipationTime, defaults.anticipationTime) + ',' +
-                            getNumber(scope.aggressivity, defaults.aggressivity) + ')'
+                            JSON.stringify(tolerance) + ')'
                     }
 
                     scope.toggleCustomTolerance = function () {

@@ -2,14 +2,11 @@ local M = {}
 
 local absEnabled = false
 local tcsEnabled = false
-local mode = "performance"
+local mode = "legacy"
 local parameters = {
     lowSpeedReference = 5,
     tolerance = "default",
-    anticipationTime = 0.05,
-    aggressivity = 2.0,
 }
-
 local function applyToVehicle(veh, absValue, tcsValue)
     if not veh or not veh.queueLuaCommand then return false end
 
@@ -34,11 +31,9 @@ local function applyParametersToVehicle(veh)
         and "\"default\""
         or string.format("%g", parameters.tolerance)
     veh:queueLuaCommand(string.format(
-        "extensions.load('universalAbsTcs'); universalAbsTcs.setParameters(%g, %s, %g, %g)",
+        "extensions.load('universalAbsTcs'); universalAbsTcs.setParameters(%g, %s)",
         parameters.lowSpeedReference,
-        toleranceValue,
-        parameters.anticipationTime,
-        parameters.aggressivity))
+        toleranceValue))
     return true
 end
 
@@ -119,10 +114,8 @@ local function setMode(newMode)
     return applyModeToVehicle(playerVeh, mode)
 end
 
-local function setParameters(lowSpeedReferenceValue, toleranceValue, anticipationTimeValue, aggressivityValue)
-    if type(lowSpeedReferenceValue) ~= "number"
-        or type(anticipationTimeValue) ~= "number"
-        or type(aggressivityValue) ~= "number" then
+local function setParameters(lowSpeedReferenceValue, toleranceValue)
+    if type(lowSpeedReferenceValue) ~= "number" then
         return false
     end
     if toleranceValue ~= "default" and type(toleranceValue) ~= "number" then
@@ -135,8 +128,6 @@ local function setParameters(lowSpeedReferenceValue, toleranceValue, anticipatio
 
     parameters.lowSpeedReference = math.max(lowSpeedReferenceValue, 0)
     parameters.tolerance = toleranceValue
-    parameters.anticipationTime = math.max(anticipationTimeValue, 0)
-    parameters.aggressivity = math.max(aggressivityValue, 0)
     return applyParametersToVehicle(playerVeh)
 end
 
@@ -144,8 +135,6 @@ local function getParameters()
     return {
         lowSpeedReference = parameters.lowSpeedReference,
         tolerance = parameters.tolerance,
-        anticipationTime = parameters.anticipationTime,
-        aggressivity = parameters.aggressivity,
     }
 end
 

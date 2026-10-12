@@ -6,23 +6,38 @@
 local M = {}
 
 local min, max, abs = math.min, math.max, math.abs
-local mode = "performance" -- "performance" (load-weighted average), "grip" (worst wheel), or "legacy" (native AI controller)
+local mode = "legacy" -- "performance" (load-weighted average), "grip" (worst wheel), or "legacy" (native AI controller)
 local lowSpeedReference = 5
 local tolerance = "default"
-local anticipationTime = 0.05 -- default: 50ms
-local aggressivity = 2.0 -- 1.5 à 2.5
 
-local function getSlipCoef(slipRatio, targetSlipRatio, aggressivity)
+-- Per-wheel integrator states: the coefficient creeps up while the wheel stays
+-- below its target slip and creeps down as soon as it exceeds it.
+local brakeCoefState = {}
+local propCoefState = {}
+
+local function resetCoefStates()
+  for k in pairs(brakeCoefState) do brakeCoefState[k] = nil end
+  for k in pairs(propCoefState) do propCoefState[k] = nil end
+end
+
+local function stepSlipCoef(state, index, slipRatio, targetSlipRatio)
   targetSlipRatio = targetSlipRatio * ((tolerance == "default" and (obj:getStaticFrictionCoef() < 0.9 and 120 or 100) or tolerance) / 100)
-  if targetSlipRatio <= 0 then return slipRatio <= 0 and 1 or 0 end
-  if slipRatio <= targetSlipRatio then return 1 end
+  local coef = state[index] or 1
+  
+  if targetSlipRatio <= 0 then
+    coef = slipRatio <= 0 and 1 or 0
+  else
+    local error = targetSlipRatio - slipRatio
+    local step = 0.01 * (1 + abs(error) / targetSlipRatio)
+    if slipRatio < targetSlipRatio then
+      coef = min(1, coef + step)
+    elseif slipRatio > targetSlipRatio then
+      coef = max(0, coef - step)
+    end
+  end
 
-  aggressivity = aggressivity or 2.0
-  --   -- native revLimiterSoftMethod: linear ramp to 0 over a fixed overshoot range, no exponent
-  -- local overshootRange = targetSlipRatio * aggressivity
-  -- return 1 - min(slipRatio - targetSlipRatio, overshootRange) / overshootRange
-  local ratio = targetSlipRatio / slipRatio
-  return ratio ^ aggressivity
+  state[index] = coef
+  return coef
 end
 
 local absEnabled = false
@@ -30,8 +45,6 @@ local tcsEnabled = false
 local wroteBrake = false
 local wroteThrottle = false
 local legacyTcs = newTemporalSmoothingHybrid(0.4, 0.9, 1, 0.01) -- native AI tuning + minimum rate
-local smoothAbs = newTemporalSmoothing(math.huge, 2, nil, 1) -- instant cut, progressive recovery
-local smoothTcs = newTemporalSmoothing(math.huge, 2, nil, 1) -- instant cut, progressive recovery
 local legacy
 
 local function clearOverrides()
@@ -43,9 +56,8 @@ local function clearOverrides()
     electrics.values.throttleOverride = nil
     wroteThrottle = false
   end
-  smoothAbs:set(1)
-  smoothTcs:set(1)
   legacyTcs:set(1)
+  resetCoefStates()
 end
 
 local function setEnabled(absOn, tcsOn)
@@ -59,9 +71,8 @@ local function setEnabled(absOn, tcsOn)
     electrics.values.throttleOverride = nil
     wroteThrottle = false
   end
-  smoothAbs:set(1)
-  smoothTcs:set(1)
   legacyTcs:set(1)
+  resetCoefStates()
 end
 
 local function setMode(newMode)
@@ -73,20 +84,15 @@ local function setMode(newMode)
   return false
 end
 
-local function setParameters(lowSpeedReferenceValue, toleranceValue, anticipationTimeValue, aggressivityValue)
-  if type(lowSpeedReferenceValue) ~= "number"
-      or type(anticipationTimeValue) ~= "number"
-      or type(aggressivityValue) ~= "number" then
+local function setParameters(lowSpeedReferenceValue, toleranceValue)
+  if type(lowSpeedReferenceValue) ~= "number" then
     return false
   end
   if toleranceValue ~= "default" and type(toleranceValue) ~= "number" then
     return false
   end
-
   lowSpeedReference = max(lowSpeedReferenceValue, 0)
   tolerance = toleranceValue
-  anticipationTime = max(anticipationTimeValue, 0)
-  aggressivity = max(aggressivityValue, 0)
   return true
 end
 
@@ -94,8 +100,6 @@ local function getParameters()
   return {
     lowSpeedReference = lowSpeedReference,
     tolerance = tolerance,
-    anticipationTime = anticipationTime,
-    aggressivity = aggressivity,
   }
 end
 
@@ -103,7 +107,6 @@ local function updateGFX(dt)
   if not (absEnabled or tcsEnabled) then return end
 
   if extensions.ai and extensions.ai.mode and extensions.ai.mode ~= "disabled" then
-    clearOverrides()
     return
   end
 
@@ -127,7 +130,6 @@ local function updateGFX(dt)
   local propCoefGrip = 1
   local propDownForce = 0
   local propWheelCount = 0
-  local dtInv = dt > 0 and (1 / dt) or 0
   local lwheels = wheels.wheels
   for i = 0, tableSizeC(lwheels) - 1 do
     local wd = lwheels[i]
@@ -135,18 +137,12 @@ local function updateGFX(dt)
       local downForce = max(wd.downForce or 0, 0)
       local wheelSpeed = wd.wheelSpeed or 0
       local peakSlipRatio = min(max(wd.slipRatioTarget or 0.18, 0), 1)
-      local radius = wd.dynamicRadius or wd.radius
-      local lastAngVel = wd.angularVelocity or 0
-      local angAccel = (wd.angularVelocity - lastAngVel) * dtInv
-      local wheelAccel = angAccel * wd.wheelDir * radius -- m/s²
-      local wheelAccelMagnitude = wheelSpeed < 0 and -wheelAccel or wheelAccel
-      -- Stop at zero instead of predicting a reversal during wheel lock.
-      local predictedWheelSpeed = max(0, abs(wheelSpeed) + wheelAccelMagnitude * anticipationTime)
-      local brakeSlipRatio = max(0, (speed - predictedWheelSpeed) / slipReferenceSpeed)
-      local driveSlipRatio = max(0, (predictedWheelSpeed - speed) / slipReferenceSpeed)
+      local wheelSpeedMagnitude = abs(wheelSpeed)
+      local brakeSlipRatio = max(0, (speed - wheelSpeedMagnitude) / slipReferenceSpeed)
+      local driveSlipRatio = max(0, (wheelSpeedMagnitude - speed) / slipReferenceSpeed)
       local driveTargetSlipRatio = min(peakSlipRatio, 1)
-      local brakeCoef = getSlipCoef(brakeSlipRatio, peakSlipRatio, aggressivity)
-      local propCoef = getSlipCoef(driveSlipRatio, driveTargetSlipRatio, aggressivity)
+      local brakeCoef = stepSlipCoef(brakeCoefState, i, brakeSlipRatio, peakSlipRatio)
+      local propCoef = stepSlipCoef(propCoefState, i, driveSlipRatio, driveTargetSlipRatio)
 
       if wd.brakeTorque > 0 then
         brakeCoefWeighted = brakeCoefWeighted + brakeCoef * downForce
@@ -169,7 +165,7 @@ local function updateGFX(dt)
 
   -- ABS
   if absEnabled and input.brake > 0 then
-    electrics.values.brakeOverride = input.brake * smoothAbs:get(brakeModelCoef, dt)
+    electrics.values.brakeOverride = min(input.brake, brakeModelCoef)
     wroteBrake = true
   elseif wroteBrake then
     electrics.values.brakeOverride = nil
@@ -178,7 +174,7 @@ local function updateGFX(dt)
 
   -- TCS
   if tcsEnabled and input.throttle > 0 then
-    electrics.values.throttleOverride = input.throttle * smoothTcs:get(propModelCoef, dt)
+    electrics.values.throttleOverride = min(input.throttle, propModelCoef)
     wroteThrottle = true
   elseif wroteThrottle then
     electrics.values.throttleOverride = nil
@@ -255,6 +251,7 @@ M.setEnabled = setEnabled
 M.setMode = setMode
 M.setParameters = setParameters
 M.getParameters = getParameters
+M.onExtensionLoaded = onExtensionLoaded
 M.updateGFX = updateGFX
 
 return M
