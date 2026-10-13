@@ -7,6 +7,11 @@ local parameters = {
     lowSpeedReference = 5,
     tolerance = "default",
 }
+
+local function isNonNegativeFinite(value)
+    return type(value) == "number" and value >= 0 and value < math.huge
+end
+
 local function applyToVehicle(veh, absValue, tcsValue)
     if not veh or not veh.queueLuaCommand then return false end
 
@@ -37,6 +42,12 @@ local function applyParametersToVehicle(veh)
     return true
 end
 
+local function applyConfigurationToVehicle(veh)
+    return applyToVehicle(veh, absEnabled, tcsEnabled)
+        and applyModeToVehicle(veh, mode)
+        and applyParametersToVehicle(veh)
+end
+
 local function onVehicleSwitched(oldId, newId, player)
     if player ~= 0 or newId == -1 or not scenetree or not scenetree.findObjectById then return end
 
@@ -45,21 +56,8 @@ local function onVehicleSwitched(oldId, newId, player)
     end
 
     if absEnabled or tcsEnabled then
-        local newVeh = scenetree.findObjectById(newId)
-        applyToVehicle(newVeh, absEnabled, tcsEnabled)
-        applyModeToVehicle(newVeh, mode)
-        applyParametersToVehicle(newVeh)
+        applyConfigurationToVehicle(scenetree.findObjectById(newId))
     end
-end
-
-local function onExtensionLoaded()
-    if not (absEnabled or tcsEnabled) then return end
-    if not be or not be.getPlayerVehicle then return end
-
-    local playerVeh = be:getPlayerVehicle(0)
-    applyToVehicle(playerVeh, absEnabled, tcsEnabled)
-    applyModeToVehicle(playerVeh, mode)
-    applyParametersToVehicle(playerVeh)
 end
 
 local function setEnabled(absOn, tcsOn)
@@ -69,31 +67,23 @@ local function setEnabled(absOn, tcsOn)
 
     absEnabled = absOn == true
     tcsEnabled = tcsOn == true
-    if not applyToVehicle(playerVeh, absEnabled, tcsEnabled) then return false end
-    if not applyParametersToVehicle(playerVeh) then return false end
-
-    ui_message((absEnabled and tcsEnabled) and "Smart Throttle & Brake Assistant enabled." or "Smart Throttle & Brake Assistant disabled.", 5, "info")
-    return true
+    return applyConfigurationToVehicle(playerVeh)
 end
 
 local function setAbsEnabled(enable)
     if not be or not be.getPlayerVehicle then return false end
     local playerVeh = be:getPlayerVehicle(0)
     if not playerVeh then return false end
-
     absEnabled = enable == true
-    if not applyToVehicle(playerVeh, absEnabled, tcsEnabled) then return false end
-    return applyParametersToVehicle(playerVeh)
+    return applyConfigurationToVehicle(playerVeh)
 end
 
 local function setTcsEnabled(enable)
     if not be or not be.getPlayerVehicle then return false end
     local playerVeh = be:getPlayerVehicle(0)
     if not playerVeh then return false end
-
     tcsEnabled = enable == true
-    if not applyToVehicle(playerVeh, absEnabled, tcsEnabled) then return false end
-    return applyParametersToVehicle(playerVeh)
+    return applyConfigurationToVehicle(playerVeh)
 end
 
 local function getStatus()
@@ -115,10 +105,10 @@ local function setMode(newMode)
 end
 
 local function setParameters(lowSpeedReferenceValue, toleranceValue)
-    if type(lowSpeedReferenceValue) ~= "number" then
+    if not isNonNegativeFinite(lowSpeedReferenceValue) then
         return false
     end
-    if toleranceValue ~= "default" and type(toleranceValue) ~= "number" then
+    if toleranceValue ~= "default" and not isNonNegativeFinite(toleranceValue) then
         return false
     end
     if not be or not be.getPlayerVehicle then return false end
@@ -126,7 +116,7 @@ local function setParameters(lowSpeedReferenceValue, toleranceValue)
     local playerVeh = be:getPlayerVehicle(0)
     if not playerVeh then return false end
 
-    parameters.lowSpeedReference = math.max(lowSpeedReferenceValue, 0)
+    parameters.lowSpeedReference = lowSpeedReferenceValue
     parameters.tolerance = toleranceValue
     return applyParametersToVehicle(playerVeh)
 end
@@ -138,7 +128,6 @@ local function getParameters()
     }
 end
 
-M.onExtensionLoaded = onExtensionLoaded
 M.onVehicleSwitched = onVehicleSwitched
 M.setEnabled = setEnabled
 M.setAbsEnabled = setAbsEnabled

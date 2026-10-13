@@ -10,6 +10,10 @@ local mode = "legacy" -- "performance" (load-weighted average), "grip" (worst wh
 local lowSpeedReference = 5
 local tolerance = "default"
 
+local function isNonNegativeFinite(value)
+  return type(value) == "number" and value >= 0 and value < math.huge
+end
+
 -- Per-wheel integrator states: the coefficient creeps up while the wheel stays
 -- below its target slip and creeps down as soon as it exceeds it.
 local brakeCoefState = {}
@@ -85,13 +89,13 @@ local function setMode(newMode)
 end
 
 local function setParameters(lowSpeedReferenceValue, toleranceValue)
-  if type(lowSpeedReferenceValue) ~= "number" then
+  if not isNonNegativeFinite(lowSpeedReferenceValue) then
     return false
   end
-  if toleranceValue ~= "default" and type(toleranceValue) ~= "number" then
+  if toleranceValue ~= "default" and not isNonNegativeFinite(toleranceValue) then
     return false
   end
-  lowSpeedReference = max(lowSpeedReferenceValue, 0)
+  lowSpeedReference = lowSpeedReferenceValue
   tolerance = toleranceValue
   return true
 end
@@ -247,7 +251,6 @@ M.setEnabled = setEnabled
 M.setMode = setMode
 M.setParameters = setParameters
 M.getParameters = getParameters
-M.onExtensionLoaded = onExtensionLoaded
 M.updateGFX = updateGFX
 
 return M

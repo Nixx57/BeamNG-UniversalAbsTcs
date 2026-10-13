@@ -37,23 +37,23 @@
                         })
                     }
 
-                    function getNumber (value, fallback) {
+                    function getNonNegativeNumber (value, fallback) {
                         var number = Number(value)
-                        return isFinite(number) ? number : fallback
+                        return isFinite(number) && number >= 0 ? number : fallback
                     }
 
                     function getParametersExpression () {
                         var tolerance = scope.bCustomTolerance
-                            ? getNumber(scope.tolerance, defaultTolerance)
+                            ? getNonNegativeNumber(scope.tolerance, defaultTolerance)
                             : 'default'
-                        var lowSpeedReferenceMps = getNumber(scope.lowSpeedReference, defaults.lowSpeedReference)
+                        var lowSpeedReferenceMps = getNonNegativeNumber(scope.lowSpeedReference, defaults.lowSpeedReference)
                         return 'setParameters(' +
                             lowSpeedReferenceMps + ',' +
                             JSON.stringify(tolerance) + ')'
                     }
 
                     scope.toggleCustomTolerance = function () {
-                        if (!isFinite(Number(scope.tolerance))) {
+                        if (!isFinite(Number(scope.tolerance)) || Number(scope.tolerance) < 0) {
                             scope.tolerance = defaultTolerance
                         }
                     }

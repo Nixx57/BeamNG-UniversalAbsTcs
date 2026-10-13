@@ -6,12 +6,12 @@
     <div>
         <div>
             <span>Minimum Speed (m/s):</span>
-            <input type="number" min="0" max="100" step="0.5" ng-model="lowSpeedReference" required>
+            <input type="number" min="0" step="0.5" ng-model="lowSpeedReference" required>
         </div>
 
         <div>
             <label><input type="checkbox" ng-model="bCustomTolerance" ng-change="toggleCustomTolerance()" aria-label="Custom Tolerance">Custom Tolerance</label>
-            <input type="number" min="0" max="1000" step="1.0" ng-model="tolerance" ng-disabled="!bCustomTolerance" required>
+            <input type="number" min="0" step="1.0" ng-model="tolerance" ng-disabled="!bCustomTolerance" required>
         </div>
     </div>
   <button title="Apply" ng-click="apply()">Apply</button>
