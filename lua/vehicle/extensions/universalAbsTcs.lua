@@ -24,7 +24,7 @@ local function resetCoefStates()
   for k in pairs(propCoefState) do propCoefState[k] = nil end
 end
 
-local function stepSlipCoef(state, index, slipRatio, targetSlipRatio)
+local function stepSlipCoef(state, index, slipRatio, targetSlipRatio, dt)
   targetSlipRatio = targetSlipRatio * ((tolerance == "default" and (obj:getStaticFrictionCoef() < 0.9 and 120 or 100) or tolerance) / 100)
   local coef = state[index] or 1
   
@@ -32,7 +32,7 @@ local function stepSlipCoef(state, index, slipRatio, targetSlipRatio)
     coef = slipRatio <= 0 and 1 or 0
   else
     local error = targetSlipRatio - slipRatio
-    local step = 0.01 * (1 + abs(error) / targetSlipRatio)
+    local step = --[[ 0.01 *]] dt * (1 + abs(error) / targetSlipRatio)
     if slipRatio < targetSlipRatio then
       coef = min(1, coef + step)
     elseif slipRatio > targetSlipRatio then
@@ -119,7 +119,7 @@ local function updateGFX(dt)
   local vx, vy, vz = obj:getSmoothRefVelocityXYZ()
   local dx, dy, dz = obj:getDirectionVectorXYZ()
   local speed = abs(vx * dx + vy * dy + vz * dz)
-  local slipReferenceSpeed = max(speed, lowSpeedReference)
+  local slipReferenceSpeed = max(speed, lowSpeedReference, 1e-6)
 
   -- wheel scan
   local brakeCoefWeighted = 0
@@ -141,8 +141,8 @@ local function updateGFX(dt)
       local brakeSlipRatio = max(0, (speed - wheelSpeedMagnitude) / slipReferenceSpeed)
       local driveSlipRatio = max(0, (wheelSpeedMagnitude - speed) / slipReferenceSpeed)
       local driveTargetSlipRatio = min(peakSlipRatio, 1)
-      local brakeCoef = stepSlipCoef(brakeCoefState, i, brakeSlipRatio, peakSlipRatio)
-      local propCoef = stepSlipCoef(propCoefState, i, driveSlipRatio, driveTargetSlipRatio)
+      local brakeCoef = stepSlipCoef(brakeCoefState, i, brakeSlipRatio, peakSlipRatio, dt)
+      local propCoef = stepSlipCoef(propCoefState, i, driveSlipRatio, driveTargetSlipRatio, dt)
 
       if wd.brakeTorque > 0 then
         brakeCoefWeighted = brakeCoefWeighted + brakeCoef * downForce
