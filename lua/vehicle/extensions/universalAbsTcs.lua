@@ -9,6 +9,8 @@ local min, max, abs = math.min, math.max, math.abs
 local mode = "performance" -- "performance" (load-weighted average), "grip" (worst wheel), or "legacy" (native AI controller)
 local lowSpeedReference = 5
 local tolerance = "default"
+local increaseDivisor = 2
+local decreaseMultiplier = 2
 
 local function isNonNegativeFinite(value)
   return type(value) == "number" and value >= 0 and value < math.huge
@@ -34,9 +36,9 @@ local function stepSlipCoef(state, index, slipRatio, targetSlipRatio, dt)
     local error = targetSlipRatio - slipRatio
     local step = --[[ 0.01 *]] dt * (1 + abs(error) / targetSlipRatio)
     if slipRatio < targetSlipRatio * 0.5 then
-      coef = min(1, coef + step)
+      coef = min(1, coef + step / increaseDivisor)
     elseif slipRatio > targetSlipRatio then
-      coef = max(0, coef - step)
+      coef = max(0, coef - step * decreaseMultiplier)
     end
   end
 
@@ -88,15 +90,28 @@ local function setMode(newMode)
   return false
 end
 
-local function setParameters(lowSpeedReferenceValue, toleranceValue)
+local function setParameters(lowSpeedReferenceValue, toleranceValue, increaseDivisorValue, decreaseMultiplierValue)
   if not isNonNegativeFinite(lowSpeedReferenceValue) then
     return false
   end
   if toleranceValue ~= "default" and not isNonNegativeFinite(toleranceValue) then
     return false
   end
+  if increaseDivisorValue ~= nil and
+      (not isNonNegativeFinite(increaseDivisorValue) or increaseDivisorValue == 0) then
+    return false
+  end
+  if decreaseMultiplierValue ~= nil and not isNonNegativeFinite(decreaseMultiplierValue) then
+    return false
+  end
   lowSpeedReference = lowSpeedReferenceValue
   tolerance = toleranceValue
+  if increaseDivisorValue ~= nil then
+    increaseDivisor = increaseDivisorValue
+  end
+  if decreaseMultiplierValue ~= nil then
+    decreaseMultiplier = decreaseMultiplierValue
+  end
   return true
 end
 
@@ -104,6 +119,8 @@ local function getParameters()
   return {
     lowSpeedReference = lowSpeedReference,
     tolerance = tolerance,
+    increaseDivisor = increaseDivisor,
+    decreaseMultiplier = decreaseMultiplier,
   }
 end
 

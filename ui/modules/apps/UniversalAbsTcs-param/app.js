@@ -12,7 +12,9 @@
                     var defaultTolerance = 100
                     var defaults = {
                         lowSpeedReference: 5,
-                        tolerance: 'default'
+                        tolerance: 'default',
+                        increaseDivisor: 2,
+                        decreaseMultiplier: 2
                     }
 
                     function callUniversalAbsTcs (expression, callback) {
@@ -27,6 +29,12 @@
                         scope.lowSpeedReference = Number(values.lowSpeedReference)
                         scope.bCustomTolerance = values.tolerance !== 'default'
                         scope.tolerance = scope.bCustomTolerance ? Number(values.tolerance) : defaultTolerance
+                        scope.increaseDivisor = values.increaseDivisor !== undefined
+                            ? Number(values.increaseDivisor)
+                            : defaults.increaseDivisor
+                        scope.decreaseMultiplier = values.decreaseMultiplier !== undefined
+                            ? Number(values.decreaseMultiplier)
+                            : defaults.decreaseMultiplier
                     }
 
                     function syncCurrentValues () {
@@ -49,7 +57,14 @@
                         var lowSpeedReferenceMps = getNonNegativeNumber(scope.lowSpeedReference, defaults.lowSpeedReference)
                         return 'setParameters(' +
                             lowSpeedReferenceMps + ',' +
-                            JSON.stringify(tolerance) + ')'
+                            JSON.stringify(tolerance) + ',' +
+                            getPositiveNumber(scope.increaseDivisor, defaults.increaseDivisor) + ',' +
+                            getNonNegativeNumber(scope.decreaseMultiplier, defaults.decreaseMultiplier) + ')'
+                    }
+
+                    function getPositiveNumber (value, fallback) {
+                        var number = Number(value)
+                        return isFinite(number) && number > 0 ? number : fallback
                     }
 
                     scope.toggleCustomTolerance = function () {

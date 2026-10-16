@@ -6,6 +6,8 @@ local mode = "performance"
 local parameters = {
     lowSpeedReference = 5,
     tolerance = "default",
+    increaseDivisor = 2,
+    decreaseMultiplier = 2,
 }
 
 local function isNonNegativeFinite(value)
@@ -36,9 +38,11 @@ local function applyParametersToVehicle(veh)
         and "\"default\""
         or string.format("%g", parameters.tolerance)
     veh:queueLuaCommand(string.format(
-        "extensions.load('universalAbsTcs'); universalAbsTcs.setParameters(%g, %s)",
+        "extensions.load('universalAbsTcs'); universalAbsTcs.setParameters(%g, %s, %g, %g)",
         parameters.lowSpeedReference,
-        toleranceValue))
+        toleranceValue,
+        parameters.increaseDivisor,
+        parameters.decreaseMultiplier))
     return true
 end
 
@@ -104,11 +108,18 @@ local function setMode(newMode)
     return applyModeToVehicle(playerVeh, mode)
 end
 
-local function setParameters(lowSpeedReferenceValue, toleranceValue)
+local function setParameters(lowSpeedReferenceValue, toleranceValue, increaseDivisorValue, decreaseMultiplierValue)
     if not isNonNegativeFinite(lowSpeedReferenceValue) then
         return false
     end
     if toleranceValue ~= "default" and not isNonNegativeFinite(toleranceValue) then
+        return false
+    end
+    if increaseDivisorValue ~= nil and
+        (not isNonNegativeFinite(increaseDivisorValue) or increaseDivisorValue == 0) then
+        return false
+    end
+    if decreaseMultiplierValue ~= nil and not isNonNegativeFinite(decreaseMultiplierValue) then
         return false
     end
     if not be or not be.getPlayerVehicle then return false end
@@ -118,6 +129,12 @@ local function setParameters(lowSpeedReferenceValue, toleranceValue)
 
     parameters.lowSpeedReference = lowSpeedReferenceValue
     parameters.tolerance = toleranceValue
+    if increaseDivisorValue ~= nil then
+        parameters.increaseDivisor = increaseDivisorValue
+    end
+    if decreaseMultiplierValue ~= nil then
+        parameters.decreaseMultiplier = decreaseMultiplierValue
+    end
     return applyParametersToVehicle(playerVeh)
 end
 
@@ -125,6 +142,8 @@ local function getParameters()
     return {
         lowSpeedReference = parameters.lowSpeedReference,
         tolerance = parameters.tolerance,
+        increaseDivisor = parameters.increaseDivisor,
+        decreaseMultiplier = parameters.decreaseMultiplier,
     }
 end
 

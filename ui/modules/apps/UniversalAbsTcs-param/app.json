@@ -9,8 +9,8 @@
     "ui.apps.categories.vehicle_control"
   ],
   "css": {
-    "width": "205px",
-    "height": "160px",
+    "width": "240px",
+    "height": "260px",
     "top": "200px",
     "left": "200px"
   },

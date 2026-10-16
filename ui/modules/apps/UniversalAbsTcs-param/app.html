@@ -13,6 +13,14 @@
             <label><input type="checkbox" ng-model="bCustomTolerance" ng-change="toggleCustomTolerance()" aria-label="Custom Tolerance">Custom Tolerance</label>
             <input type="number" min="0" step="1.0" ng-model="tolerance" ng-disabled="!bCustomTolerance" required>
         </div>
+        <div>
+            <span>Coefficient increase divisor:</span>
+            <input type="number" min="0.01" step="0.1" ng-model="increaseDivisor" required>
+        </div>
+        <div>
+            <span>Coefficient decrease multiplier:</span>
+            <input type="number" min="0" step="0.1" ng-model="decreaseMultiplier" required>
+        </div>
     </div>
   <button title="Apply" ng-click="apply()">Apply</button>
 </div>
