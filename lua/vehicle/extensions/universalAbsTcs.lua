@@ -161,11 +161,9 @@ local function updateGFX(dt)
       local brakeCoef = stepSlipCoef(brakeCoefState, i, brakeSlipRatio, peakSlipRatio, dt)
       local propCoef = stepSlipCoef(propCoefState, i, driveSlipRatio, driveTargetSlipRatio, dt)
 
-      if wd.brakeTorque > 0 then
-        brakeCoefWeighted = brakeCoefWeighted + brakeCoef * downForce
-        totalDownForce = totalDownForce + downForce
-        brakeCoefGrip = min(brakeCoefGrip, brakeCoef)
-      end
+      brakeCoefWeighted = brakeCoefWeighted + brakeCoef * downForce
+      totalDownForce = totalDownForce + downForce
+      brakeCoefGrip = min(brakeCoefGrip, brakeCoef)
 
       if wd.isPropulsed then
         propCoefWeighted = propCoefWeighted + propCoef * downForce
