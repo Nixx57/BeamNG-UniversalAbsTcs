@@ -12,8 +12,8 @@ It's imperfect, but works fairly well in most situations.
   Modes cycle through `performance`, `grip`, and `legacy`, wrapping at either end.
 - The default mode is `performance`.
 - The parameters app exposes minimum reference speed, tolerance, and coefficient
-  increase/decrease rates for `performance` and `grip`. The increase divisor must be
-  greater than zero; both rate factors default to `2`.
+  increase/decrease rates for `performance` and `grip`. The increase multiplier must be
+  greater than zero and defaults to `0.5`; the decrease multiplier defaults to `2`.
 - Or from the console / another mod:
   ```lua
   extensions.load('universalAbsTcs')
@@ -38,9 +38,8 @@ It's imperfect, but works fairly well in most situations.
 - Each wheel owns an integrator coefficient clamped to `[0, 1]`: it is raised below
   half its target slip, lowered above its target, and held between those thresholds.
   For a positive target, the step is `dt * (1 + abs(target - slip) / target)`.
-  The increase rate is divided by the configurable increase divisor; the decrease
-  rate is multiplied by the configurable decrease multiplier. Defaults of `2` preserve
-  the current rates. There is no deadband.
+  The increase and decrease rates are multiplied by the configurable increase
+  (default `0.5`) and decrease (default `2`) multipliers. There is no deadband.
   `performance` uses a load-weighted average; `grip` uses the smallest coefficient.
   The target comes from the wheel's ABS slip setting, not a measured grip optimum.
   The step applies per graphics update, so the reaction rate follows the graphics rate.

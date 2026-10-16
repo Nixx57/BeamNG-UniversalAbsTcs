@@ -13,7 +13,7 @@
                     var defaults = {
                         lowSpeedReference: 5,
                         tolerance: 'default',
-                        increaseDivisor: 2,
+                        increaseMultiplier: 0.5,
                         decreaseMultiplier: 2
                     }
 
@@ -29,9 +29,9 @@
                         scope.lowSpeedReference = Number(values.lowSpeedReference)
                         scope.bCustomTolerance = values.tolerance !== 'default'
                         scope.tolerance = scope.bCustomTolerance ? Number(values.tolerance) : defaultTolerance
-                        scope.increaseDivisor = values.increaseDivisor !== undefined
-                            ? Number(values.increaseDivisor)
-                            : defaults.increaseDivisor
+                        scope.increaseMultiplier = values.increaseMultiplier !== undefined
+                            ? Number(values.increaseMultiplier)
+                            : defaults.increaseMultiplier
                         scope.decreaseMultiplier = values.decreaseMultiplier !== undefined
                             ? Number(values.decreaseMultiplier)
                             : defaults.decreaseMultiplier
@@ -58,7 +58,7 @@
                         return 'setParameters(' +
                             lowSpeedReferenceMps + ',' +
                             JSON.stringify(tolerance) + ',' +
-                            getPositiveNumber(scope.increaseDivisor, defaults.increaseDivisor) + ',' +
+                            getPositiveNumber(scope.increaseMultiplier, defaults.increaseMultiplier) + ',' +
                             getNonNegativeNumber(scope.decreaseMultiplier, defaults.decreaseMultiplier) + ')'
                     }
 

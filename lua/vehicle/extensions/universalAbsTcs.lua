@@ -9,7 +9,7 @@ local min, max, abs = math.min, math.max, math.abs
 local mode = "performance" -- "performance" (load-weighted average), "grip" (worst wheel), or "legacy" (native AI controller)
 local lowSpeedReference = 5
 local tolerance = "default"
-local increaseDivisor = 2
+local increaseMultiplier = 0.5
 local decreaseMultiplier = 2
 
 local function isNonNegativeFinite(value)
@@ -36,7 +36,7 @@ local function stepSlipCoef(state, index, slipRatio, targetSlipRatio, dt)
     local error = targetSlipRatio - slipRatio
     local step = --[[ 0.01 *]] dt * (1 + abs(error) / targetSlipRatio)
     if slipRatio < targetSlipRatio * 0.5 then
-      coef = min(1, coef + step / increaseDivisor)
+      coef = min(1, coef + step * increaseMultiplier)
     elseif slipRatio > targetSlipRatio then
       coef = max(0, coef - step * decreaseMultiplier)
     end
@@ -90,15 +90,15 @@ local function setMode(newMode)
   return false
 end
 
-local function setParameters(lowSpeedReferenceValue, toleranceValue, increaseDivisorValue, decreaseMultiplierValue)
+local function setParameters(lowSpeedReferenceValue, toleranceValue, increaseMultiplierValue, decreaseMultiplierValue)
   if not isNonNegativeFinite(lowSpeedReferenceValue) then
     return false
   end
   if toleranceValue ~= "default" and not isNonNegativeFinite(toleranceValue) then
     return false
   end
-  if increaseDivisorValue ~= nil and
-      (not isNonNegativeFinite(increaseDivisorValue) or increaseDivisorValue == 0) then
+  if increaseMultiplierValue ~= nil and
+      (not isNonNegativeFinite(increaseMultiplierValue) or increaseMultiplierValue == 0) then
     return false
   end
   if decreaseMultiplierValue ~= nil and not isNonNegativeFinite(decreaseMultiplierValue) then
@@ -106,8 +106,8 @@ local function setParameters(lowSpeedReferenceValue, toleranceValue, increaseDiv
   end
   lowSpeedReference = lowSpeedReferenceValue
   tolerance = toleranceValue
-  if increaseDivisorValue ~= nil then
-    increaseDivisor = increaseDivisorValue
+  if increaseMultiplierValue ~= nil then
+    increaseMultiplier = increaseMultiplierValue
   end
   if decreaseMultiplierValue ~= nil then
     decreaseMultiplier = decreaseMultiplierValue
@@ -119,7 +119,7 @@ local function getParameters()
   return {
     lowSpeedReference = lowSpeedReference,
     tolerance = tolerance,
-    increaseDivisor = increaseDivisor,
+    increaseMultiplier = increaseMultiplier,
     decreaseMultiplier = decreaseMultiplier,
   }
 end

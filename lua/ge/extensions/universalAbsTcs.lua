@@ -6,7 +6,7 @@ local mode = "performance"
 local parameters = {
     lowSpeedReference = 5,
     tolerance = "default",
-    increaseDivisor = 2,
+    increaseMultiplier = 0.5,
     decreaseMultiplier = 2,
 }
 
@@ -41,7 +41,7 @@ local function applyParametersToVehicle(veh)
         "extensions.load('universalAbsTcs'); universalAbsTcs.setParameters(%g, %s, %g, %g)",
         parameters.lowSpeedReference,
         toleranceValue,
-        parameters.increaseDivisor,
+        parameters.increaseMultiplier,
         parameters.decreaseMultiplier))
     return true
 end
@@ -108,15 +108,15 @@ local function setMode(newMode)
     return applyModeToVehicle(playerVeh, mode)
 end
 
-local function setParameters(lowSpeedReferenceValue, toleranceValue, increaseDivisorValue, decreaseMultiplierValue)
+local function setParameters(lowSpeedReferenceValue, toleranceValue, increaseMultiplierValue, decreaseMultiplierValue)
     if not isNonNegativeFinite(lowSpeedReferenceValue) then
         return false
     end
     if toleranceValue ~= "default" and not isNonNegativeFinite(toleranceValue) then
         return false
     end
-    if increaseDivisorValue ~= nil and
-        (not isNonNegativeFinite(increaseDivisorValue) or increaseDivisorValue == 0) then
+    if increaseMultiplierValue ~= nil and
+        (not isNonNegativeFinite(increaseMultiplierValue) or increaseMultiplierValue == 0) then
         return false
     end
     if decreaseMultiplierValue ~= nil and not isNonNegativeFinite(decreaseMultiplierValue) then
@@ -129,8 +129,8 @@ local function setParameters(lowSpeedReferenceValue, toleranceValue, increaseDiv
 
     parameters.lowSpeedReference = lowSpeedReferenceValue
     parameters.tolerance = toleranceValue
-    if increaseDivisorValue ~= nil then
-        parameters.increaseDivisor = increaseDivisorValue
+    if increaseMultiplierValue ~= nil then
+        parameters.increaseMultiplier = increaseMultiplierValue
     end
     if decreaseMultiplierValue ~= nil then
         parameters.decreaseMultiplier = decreaseMultiplierValue
@@ -142,7 +142,7 @@ local function getParameters()
     return {
         lowSpeedReference = parameters.lowSpeedReference,
         tolerance = parameters.tolerance,
-        increaseDivisor = parameters.increaseDivisor,
+        increaseMultiplier = parameters.increaseMultiplier,
         decreaseMultiplier = parameters.decreaseMultiplier,
     }
 end
