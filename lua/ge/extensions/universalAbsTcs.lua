@@ -2,7 +2,7 @@ local M = {}
 
 local absEnabled = false
 local tcsEnabled = false
-local mode = "legacy"
+local mode = "performance"
 local parameters = {
     lowSpeedReference = 5,
     tolerance = "default",

@@ -36,7 +36,7 @@
 
           scope.absEnabled = false
           scope.tcsEnabled = false
-          scope.mode = 'legacy'
+          scope.mode = 'performance'
 
           scope.setAbsEnabled = function (targetState) {
             var enable = targetState !== undefined ? targetState : scope.absEnabled

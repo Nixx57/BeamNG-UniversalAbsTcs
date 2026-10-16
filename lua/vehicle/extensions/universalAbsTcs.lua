@@ -6,7 +6,7 @@
 local M = {}
 
 local min, max, abs = math.min, math.max, math.abs
-local mode = "legacy" -- "performance" (load-weighted average), "grip" (worst wheel), or "legacy" (native AI controller)
+local mode = "performance" -- "performance" (load-weighted average), "grip" (worst wheel), or "legacy" (native AI controller)
 local lowSpeedReference = 5
 local tolerance = "default"
 

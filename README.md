@@ -10,7 +10,7 @@ It's imperfect, but works fairly well in most situations.
 - Open the "Smart Throttle & Brake Assistant" app (GuiApp) from the app menu and toggle ABS/TCS.
 - Use the right arrow for the next mode and the left arrow for the previous mode.
   Modes cycle through `performance`, `grip`, and `legacy`, wrapping at either end.
-- The default mode is `legacy`.
+- The default mode is `performance`.
 - The parameters app exposes minimum reference speed and tolerance for `performance`
   and `grip`; the minimum coefficient step is fixed at `0.01`, not configurable.
 - Or from the console / another mod:
