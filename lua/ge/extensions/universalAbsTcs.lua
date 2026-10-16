@@ -147,7 +147,13 @@ local function getParameters()
     }
 end
 
+local function applyToPlayerVehicle()
+    if not be or not be.getPlayerVehicle then return false end
+    return applyConfigurationToVehicle(be:getPlayerVehicle(0))
+end
+
 M.onVehicleSwitched = onVehicleSwitched
+M.applyToPlayerVehicle = applyToPlayerVehicle
 M.setEnabled = setEnabled
 M.setAbsEnabled = setAbsEnabled
 M.setTcsEnabled = setTcsEnabled

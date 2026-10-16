@@ -153,7 +153,7 @@ local function updateGFX(dt)
     if not wd.isBroken then
       local downForce = max(wd.downForce or 0, 0)
       local wheelSpeed = wd.wheelSpeed or 0
-      local peakSlipRatio = min(max(wd.slipRatioTarget or 0.18, 0), 1)
+      local peakSlipRatio = min(2 / slipReferenceSpeed + max(wd.slipRatioTarget or 0.18, 0), 1)
       local wheelSpeedMagnitude = abs(wheelSpeed)
       local brakeSlipRatio = max(0, (speed - wheelSpeedMagnitude) / slipReferenceSpeed)
       local driveSlipRatio = max(0, (wheelSpeedMagnitude - speed) / slipReferenceSpeed)
