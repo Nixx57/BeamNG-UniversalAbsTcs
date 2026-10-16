@@ -33,7 +33,7 @@ local function stepSlipCoef(state, index, slipRatio, targetSlipRatio, dt)
   else
     local error = targetSlipRatio - slipRatio
     local step = --[[ 0.01 *]] dt * (1 + abs(error) / targetSlipRatio)
-    if slipRatio < targetSlipRatio then
+    if slipRatio < targetSlipRatio * 0.5 then
       coef = min(1, coef + step)
     elseif slipRatio > targetSlipRatio then
       coef = max(0, coef - step)
