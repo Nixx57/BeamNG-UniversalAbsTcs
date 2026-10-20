@@ -52,3 +52,9 @@ It's imperfect, but works fairly well in most situations.
 
 ## Standalone mod
 This folder is self-contained (`lua/` + `ui/`) and independent from any other mod.
+
+## License and attribution
+This mod is distributed under the BeamNG Common Development and Distribution License
+(bCDDL), version 1.1; a copy is included in `LICENCE`. The legacy ABS/TCS controller
+contains portions derived from BeamNG's `lua/vehicle/ai.lua`. Modifications to that
+code were contributed by Nixx57.

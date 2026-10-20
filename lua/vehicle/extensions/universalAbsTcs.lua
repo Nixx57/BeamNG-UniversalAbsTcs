@@ -1,3 +1,7 @@
+-- This Source Code Form is subject to the terms of the bCDDL, v. 1.1.
+-- Portions of the legacy ABS/TCS controller are derived from BeamNG's ai.lua.
+-- Modifications by Nixx57. A copy of the bCDDL is included as LICENCE.
+
 -- Smart Throttle & Brake Assistant: virtual driving aid
 -- Limits the player's brake/throttle inputs to avoid wheel lock (braking) and wheel spin (acceleration)
 -- Works on any vehicle, regardless of its native ABS/TCS/ESC configuration
