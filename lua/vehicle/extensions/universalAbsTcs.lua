@@ -15,6 +15,34 @@ local lowSpeedReference = 5
 local tolerance = "default"
 local increaseMultiplier = 0.5
 local decreaseMultiplier = 1
+local forceGearboxAggression = false
+local aggressionController
+
+local function clearAggressionOverride()
+  if aggressionController then
+    aggressionController.setAggressionOverride(nil)
+    aggressionController = nil
+  end
+end
+
+local function updateAggressionOverride()
+  local mainController = controller.mainController
+  if forceGearboxAggression and mainController and mainController.gearboxBehavior == "arcade"
+      and type(mainController.setAggressionOverride) == "function" then
+    if aggressionController ~= mainController then
+      clearAggressionOverride()
+    end
+    mainController.setAggressionOverride(1)
+    aggressionController = mainController
+  else
+    clearAggressionOverride()
+  end
+end
+
+local function setForceGearboxAggression(enabled)
+  forceGearboxAggression = enabled == true
+  updateAggressionOverride()
+end
 
 local function isNonNegativeFinite(value)
   return type(value) == "number" and value >= 0 and value < math.huge
@@ -60,6 +88,7 @@ local legacyTcs = newTemporalSmoothingHybrid(0.4, 0.9, 1, 0.01) -- native AI tun
 local legacy
 
 local function clearOverrides()
+  clearAggressionOverride()
   if wroteBrake then
     electrics.values.brakeOverride = nil
     wroteBrake = false
@@ -96,7 +125,7 @@ local function setMode(newMode)
   return false
 end
 
-local function setParameters(lowSpeedReferenceValue, toleranceValue, increaseMultiplierValue, decreaseMultiplierValue)
+local function setParameters(lowSpeedReferenceValue, toleranceValue, increaseMultiplierValue, decreaseMultiplierValue, forceGearboxAggressionValue)
   if not isNonNegativeFinite(lowSpeedReferenceValue) then
     return false
   end
@@ -110,6 +139,9 @@ local function setParameters(lowSpeedReferenceValue, toleranceValue, increaseMul
   if decreaseMultiplierValue ~= nil and not isNonNegativeFinite(decreaseMultiplierValue) then
     return false
   end
+  if forceGearboxAggressionValue ~= nil and type(forceGearboxAggressionValue) ~= "boolean" then
+    return false
+  end
   lowSpeedReference = lowSpeedReferenceValue
   tolerance = toleranceValue
   if increaseMultiplierValue ~= nil then
@@ -117,6 +149,9 @@ local function setParameters(lowSpeedReferenceValue, toleranceValue, increaseMul
   end
   if decreaseMultiplierValue ~= nil then
     decreaseMultiplier = decreaseMultiplierValue
+  end
+  if forceGearboxAggressionValue ~= nil then
+    setForceGearboxAggression(forceGearboxAggressionValue)
   end
   return true
 end
@@ -127,10 +162,12 @@ local function getParameters()
     tolerance = tolerance,
     increaseMultiplier = increaseMultiplier,
     decreaseMultiplier = decreaseMultiplier,
+    forceGearboxAggression = forceGearboxAggression,
   }
 end
 
 local function updateGFX(dt)
+  updateAggressionOverride()
   if not (absEnabled or tcsEnabled) then return end
 
   if mode == "legacy" then
@@ -268,7 +305,9 @@ legacy = function(dt)
 end
 
 M.onReset = clearOverrides
+M.onExtensionUnloaded = clearOverrides
 M.setEnabled = setEnabled
+M.setForceGearboxAggression = setForceGearboxAggression
 M.setMode = setMode
 M.setParameters = setParameters
 M.getParameters = getParameters

@@ -21,6 +21,9 @@
             <span>Coefficient decrease multiplier:</span>
             <input type="number" min="0" step="0.1" ng-model="decreaseMultiplier" required>
         </div>
+        <div>
+            <label title="Force gearbox aggression"><input type="checkbox" ng-model="forceGearboxAggression" aria-label="Force gearbox stress">Force gearbox stress</label>
+        </div>
     </div>
   <button title="Apply" ng-click="apply()">Apply</button>
 </div>

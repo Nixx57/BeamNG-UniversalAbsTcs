@@ -14,6 +14,13 @@ It's imperfect, but works fairly well in most situations.
 - The parameters app exposes minimum reference speed, tolerance, and coefficient
   increase/decrease rates for `performance` and `grip`. The increase multiplier must be
   greater than zero and defaults to `0.5`; the decrease multiplier defaults to `2`.
+- In the parameters app, check "Force gearbox stress to 1 (arcade only)" and click
+  **Apply** to call `setAggressionOverride(1)` while the gearbox is in arcade mode.
+  This option is off by default and works independently of ABS/TCS, in all assist modes.
+  Uncheck it and apply (or use **Reset to default**) to release the override with
+  `setAggressionOverride(nil)`. Realistic gearbox mode is left untouched.
+  The option follows the player's vehicle when switching vehicles; the previous
+  vehicle's override is released.
 - Or from the console / another mod:
   ```lua
   extensions.load('universalAbsTcs')

@@ -7,7 +7,8 @@ local parameters = {
     lowSpeedReference = 5,
     tolerance = "default",
     increaseMultiplier = 0.5,
-    decreaseMultiplier = 2,
+    decreaseMultiplier = 1,
+    forceGearboxAggression = false,
 }
 
 local function isNonNegativeFinite(value)
@@ -38,11 +39,12 @@ local function applyParametersToVehicle(veh)
         and "\"default\""
         or string.format("%g", parameters.tolerance)
     veh:queueLuaCommand(string.format(
-        "extensions.load('universalAbsTcs'); universalAbsTcs.setParameters(%g, %s, %g, %g)",
+        "extensions.load('universalAbsTcs'); universalAbsTcs.setParameters(%g, %s, %g, %g, %s)",
         parameters.lowSpeedReference,
         toleranceValue,
         parameters.increaseMultiplier,
-        parameters.decreaseMultiplier))
+        parameters.decreaseMultiplier,
+        parameters.forceGearboxAggression and "true" or "false"))
     return true
 end
 
@@ -55,11 +57,15 @@ end
 local function onVehicleSwitched(oldId, newId, player)
     if player ~= 0 or newId == -1 or not scenetree or not scenetree.findObjectById then return end
 
-    if (absEnabled or tcsEnabled) and oldId and oldId ~= -1 then
-        applyToVehicle(scenetree.findObjectById(oldId), false, false)
+    if (absEnabled or tcsEnabled or parameters.forceGearboxAggression) and oldId and oldId ~= -1 then
+        local oldVeh = scenetree.findObjectById(oldId)
+        if applyToVehicle(oldVeh, false, false) then
+            oldVeh:queueLuaCommand(
+                "universalAbsTcs.setForceGearboxAggression(false)")
+        end
     end
 
-    if absEnabled or tcsEnabled then
+    if absEnabled or tcsEnabled or parameters.forceGearboxAggression then
         applyConfigurationToVehicle(scenetree.findObjectById(newId))
     end
 end
@@ -108,7 +114,7 @@ local function setMode(newMode)
     return applyModeToVehicle(playerVeh, mode)
 end
 
-local function setParameters(lowSpeedReferenceValue, toleranceValue, increaseMultiplierValue, decreaseMultiplierValue)
+local function setParameters(lowSpeedReferenceValue, toleranceValue, increaseMultiplierValue, decreaseMultiplierValue, forceGearboxAggressionValue)
     if not isNonNegativeFinite(lowSpeedReferenceValue) then
         return false
     end
@@ -120,6 +126,9 @@ local function setParameters(lowSpeedReferenceValue, toleranceValue, increaseMul
         return false
     end
     if decreaseMultiplierValue ~= nil and not isNonNegativeFinite(decreaseMultiplierValue) then
+        return false
+    end
+    if forceGearboxAggressionValue ~= nil and type(forceGearboxAggressionValue) ~= "boolean" then
         return false
     end
     if not be or not be.getPlayerVehicle then return false end
@@ -135,6 +144,9 @@ local function setParameters(lowSpeedReferenceValue, toleranceValue, increaseMul
     if decreaseMultiplierValue ~= nil then
         parameters.decreaseMultiplier = decreaseMultiplierValue
     end
+    if forceGearboxAggressionValue ~= nil then
+        parameters.forceGearboxAggression = forceGearboxAggressionValue
+    end
     return applyParametersToVehicle(playerVeh)
 end
 
@@ -144,6 +156,7 @@ local function getParameters()
         tolerance = parameters.tolerance,
         increaseMultiplier = parameters.increaseMultiplier,
         decreaseMultiplier = parameters.decreaseMultiplier,
+        forceGearboxAggression = parameters.forceGearboxAggression,
     }
 end
 

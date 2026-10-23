@@ -14,7 +14,8 @@
                         lowSpeedReference: 5,
                         tolerance: 'default',
                         increaseMultiplier: 0.5,
-                        decreaseMultiplier: 1
+                        decreaseMultiplier: 1,
+                        forceGearboxAggression: false
                     }
 
                     function callUniversalAbsTcs (expression, callback) {
@@ -35,6 +36,7 @@
                         scope.decreaseMultiplier = values.decreaseMultiplier !== undefined
                             ? Number(values.decreaseMultiplier)
                             : defaults.decreaseMultiplier
+                        scope.forceGearboxAggression = values.forceGearboxAggression === true
                     }
 
                     function syncCurrentValues () {
@@ -59,7 +61,8 @@
                             lowSpeedReferenceMps + ',' +
                             JSON.stringify(tolerance) + ',' +
                             getPositiveNumber(scope.increaseMultiplier, defaults.increaseMultiplier) + ',' +
-                            getNonNegativeNumber(scope.decreaseMultiplier, defaults.decreaseMultiplier) + ')'
+                            getNonNegativeNumber(scope.decreaseMultiplier, defaults.decreaseMultiplier) + ',' +
+                            (scope.forceGearboxAggression ? 'true' : 'false') + ')'
                     }
 
                     function getPositiveNumber (value, fallback) {
