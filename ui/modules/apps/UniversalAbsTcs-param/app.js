@@ -14,7 +14,7 @@
                         lowSpeedReference: 5,
                         tolerance: 'default',
                         increaseMultiplier: 0.5,
-                        decreaseMultiplier: 2
+                        decreaseMultiplier: 1
                     }
 
                     function callUniversalAbsTcs (expression, callback) {

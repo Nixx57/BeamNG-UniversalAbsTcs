@@ -14,7 +14,7 @@ local mode = "performance" -- "performance" (load-weighted average), "grip" (wor
 local lowSpeedReference = 5
 local tolerance = "default"
 local increaseMultiplier = 0.5
-local decreaseMultiplier = 2
+local decreaseMultiplier = 1
 
 local function isNonNegativeFinite(value)
   return type(value) == "number" and value >= 0 and value < math.huge
@@ -30,16 +30,18 @@ local function resetCoefStates()
   for k in pairs(propCoefState) do propCoefState[k] = nil end
 end
 
-local function stepSlipCoef(state, index, slipRatio, targetSlipRatio, dt)
-  targetSlipRatio = targetSlipRatio * ((tolerance == "default" and (obj:getStaticFrictionCoef() < 0.9 and 120 or 100) or tolerance) / 100)
+local function stepSlipCoef(state, index, slipRatio, targetSlipRatio, minSlipRatio, dt)
+  local appliedTol = ((tolerance == "default" and (obj:getStaticFrictionCoef() < 0.9 and 120 or 100) or tolerance) / 100)
+  targetSlipRatio = targetSlipRatio * appliedTol
+  minSlipRatio = minSlipRatio * appliedTol
   local coef = state[index] or 1
   
   if targetSlipRatio <= 0 then
     coef = slipRatio <= 0 and 1 or 0
   else
-    local error = targetSlipRatio - slipRatio
-    local step = --[[ 0.01 *]] dt * (1 + abs(error) / targetSlipRatio)
-    if slipRatio < targetSlipRatio * 0.5 then
+    local error = minSlipRatio - slipRatio
+    local step = dt * (1 + abs(error) / minSlipRatio)
+    if slipRatio < minSlipRatio then
       coef = min(1, coef + step * increaseMultiplier)
     elseif slipRatio > targetSlipRatio then
       coef = max(0, coef - step * decreaseMultiplier)
@@ -162,8 +164,8 @@ local function updateGFX(dt)
       local brakeSlipRatio = max(0, (speed - wheelSpeedMagnitude) / slipReferenceSpeed)
       local driveSlipRatio = max(0, (wheelSpeedMagnitude - speed) / slipReferenceSpeed)
       local driveTargetSlipRatio = min(peakSlipRatio, 1)
-      local brakeCoef = stepSlipCoef(brakeCoefState, i, brakeSlipRatio, peakSlipRatio, dt)
-      local propCoef = stepSlipCoef(propCoefState, i, driveSlipRatio, driveTargetSlipRatio, dt)
+      local brakeCoef = stepSlipCoef(brakeCoefState, i, brakeSlipRatio, peakSlipRatio, max(wd.slipRatioTarget or 0.18, 0), dt)
+      local propCoef = stepSlipCoef(propCoefState, i, driveSlipRatio, driveTargetSlipRatio, max(wd.slipRatioTarget or 0.18, 0), dt)
 
       brakeCoefWeighted = brakeCoefWeighted + brakeCoef * downForce
       totalDownForce = totalDownForce + downForce
