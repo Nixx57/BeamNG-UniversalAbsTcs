@@ -3,7 +3,7 @@ setlocal
 
 set "modRoot=%~dp0"
 set "modRoot=%modRoot:~0,-1%"
-for %%I in ("%modRoot%") do set "archivePath=%%~dpIuniversalAbsTcs_v1.2.zip"
+for %%I in ("%modRoot%") do set "archivePath=%%~dpIuniversalAbsTcs_v0.1.zip"
 set "tempDir=%TEMP%\universalAbsTcs_package"
 
 if exist "%archivePath%" del /f /q "%archivePath%"
