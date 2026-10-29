@@ -7,7 +7,7 @@ local parameters = {
     lowSpeedReference = 5,
     tolerance = "default",
     increaseMultiplier = 0.5,
-    decreaseMultiplier = 2,
+    decreaseMultiplier = 1,
 }
 
 local function isNonNegativeFinite(value)
