@@ -10,7 +10,7 @@
 local M = {}
 
 local min, max, abs = math.min, math.max, math.abs
-local mode = "performance" -- "performance" (load-weighted average), "grip" (worst wheel), or "legacy" (native AI controller)
+local mode = "performance" -- "performance" (load-weighted average), "balanced" (inverse-load-weighted average), "grip" (worst wheel), or "legacy" (native AI controller)
 local lowSpeedReference = 5
 local tolerance = "default"
 local increaseMultiplier = 0.5
@@ -88,7 +88,7 @@ local function setEnabled(absOn, tcsOn)
 end
 
 local function setMode(newMode)
-  if newMode == "grip" or newMode == "performance" or newMode == "legacy" then
+  if newMode == "grip" or newMode == "balanced" or newMode == "performance" or newMode == "legacy" then
     mode = newMode
     clearOverrides()
     return true
@@ -147,9 +147,13 @@ local function updateGFX(dt)
   -- wheel scan
   local brakeCoefWeighted = 0
   local totalDownForce = 0
+  local brakeCoefInverseWeighted = 0
+  local brakeInverseWeightSum = 0
   local brakeCoefGrip = 1
   local propCoefWeighted = 0
   local propCoefSum = 0
+  local propCoefInverseWeighted = 0
+  local propInverseWeightSum = 0
   local propCoefGrip = 1
   local propDownForce = 0
   local propWheelCount = 0
@@ -166,23 +170,28 @@ local function updateGFX(dt)
       local driveTargetSlipRatio = min(peakSlipRatio, 1)
       local brakeCoef = stepSlipCoef(brakeCoefState, i, brakeSlipRatio, peakSlipRatio, max(wd.slipRatioTarget or 0.18, 0), dt)
       local propCoef = stepSlipCoef(propCoefState, i, driveSlipRatio, driveTargetSlipRatio, max(wd.slipRatioTarget or 0.18, 0), dt)
+      local inverseLoadWeight = 1 / (downForce + 1)
 
       brakeCoefWeighted = brakeCoefWeighted + brakeCoef * downForce
       totalDownForce = totalDownForce + downForce
+      brakeCoefInverseWeighted = brakeCoefInverseWeighted + brakeCoef * inverseLoadWeight
+      brakeInverseWeightSum = brakeInverseWeightSum + inverseLoadWeight
       brakeCoefGrip = min(brakeCoefGrip, brakeCoef)
 
       if wd.isPropulsed then
         propCoefWeighted = propCoefWeighted + propCoef * downForce
         propCoefSum = propCoefSum + propCoef
+        propCoefInverseWeighted = propCoefInverseWeighted + propCoef * inverseLoadWeight
+        propInverseWeightSum = propInverseWeightSum + inverseLoadWeight
         propDownForce = propDownForce + downForce
         propWheelCount = propWheelCount + 1
         propCoefGrip = min(propCoefGrip, propCoef)
       end
     end
   end
-  local brakeModelCoef = totalDownForce > 0 and (mode == "grip" and brakeCoefGrip or brakeCoefWeighted / totalDownForce) or 0
-  local propNoLoadCoef = propWheelCount > 0 and (mode == "grip" and propCoefGrip or propCoefSum / propWheelCount) or 1
-  local propModelCoef = propDownForce > 0 and (mode == "grip" and propCoefGrip or propCoefWeighted / propDownForce) or propNoLoadCoef
+  local brakeModelCoef = totalDownForce > 0 and (mode == "grip" and brakeCoefGrip or mode == "balanced" and brakeCoefInverseWeighted / brakeInverseWeightSum or brakeCoefWeighted / totalDownForce) or 0
+  local propNoLoadCoef = propWheelCount > 0 and (mode == "grip" and propCoefGrip or mode == "balanced" and propCoefInverseWeighted / propInverseWeightSum or propCoefSum / propWheelCount) or 1
+  local propModelCoef = propDownForce > 0 and (mode == "grip" and propCoefGrip or mode == "balanced" and propCoefInverseWeighted / propInverseWeightSum or propCoefWeighted / propDownForce) or propNoLoadCoef
 
   -- ABS
   if absEnabled and input.brake > 0 then

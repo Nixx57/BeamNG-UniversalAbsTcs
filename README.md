@@ -9,7 +9,7 @@ It's imperfect, but works fairly well in most situations.
 ## Usage
 - Open the "Smart Throttle & Brake Assistant" app (GuiApp) from the app menu and toggle ABS/TCS.
 - Use the right arrow for the next mode and the left arrow for the previous mode.
-  Modes cycle through `performance`, `grip`, and `legacy`, wrapping at either end.
+  Modes cycle through `performance`, `balanced`, `grip`, and `legacy`, wrapping at either end.
 - The default mode is `performance`.
 - The parameters app exposes minimum reference speed, tolerance, and coefficient
   increase/decrease rates for `performance` and `grip`. The increase multiplier must be
@@ -19,7 +19,7 @@ It's imperfect, but works fairly well in most situations.
   extensions.load('universalAbsTcs')
   universalAbsTcs.setAbsEnabled(true)
   universalAbsTcs.setTcsEnabled(true)
-  universalAbsTcs.setMode("grip") -- "performance", "grip", or "legacy"
+  universalAbsTcs.setMode("balanced") -- "performance" "balanced", "grip", or "legacy"
   -- or both at once
   universalAbsTcs.setEnabled(true, true)
   ```
@@ -32,7 +32,7 @@ It's imperfect, but works fairly well in most situations.
   `throttleOverride` (the same override mechanism used by cruise control), only while
   the player is actively braking/accelerating. The standard vehicle controller reads
   these overrides on its next graphics update.
-- In `performance` and `grip` modes, the slip ratio of each wheel is computed from the
+- In `performance`, `balanced`, and `grip` modes, the slip ratio of each wheel is computed from the
   current wheel speed magnitude versus the longitudinal vehicle speed, without
   prediction or additional wheel speed smoothing.
 - Each wheel owns an integrator coefficient clamped to `[0, 1]`: it is raised below
@@ -40,7 +40,9 @@ It's imperfect, but works fairly well in most situations.
   For a positive target, the step is `dt * (1 + abs(target - slip) / target)`.
   The increase and decrease rates are multiplied by the configurable increase
   (default `0.5`) and decrease (default `2`) multipliers. There is no deadband.
-  `performance` uses a load-weighted average; `grip` uses the smallest coefficient.
+  `performance` uses a load-weighted average; `balanced` uses an inverse-load-weighted
+  average with weights of `1 / (downforce + 1)`, so wheels with less downforce have more
+  influence; `grip` uses the smallest coefficient.
   The target comes from the wheel's ABS slip setting, not a measured grip optimum.
   The step applies per graphics update, so the reaction rate follows the graphics rate.
 - The computed coefficient is applied directly to the pedal input, without additional

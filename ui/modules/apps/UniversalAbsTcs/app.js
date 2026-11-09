@@ -27,7 +27,7 @@
                 if (typeof status.tcsEnabled === 'boolean') {
                   scope.tcsEnabled = status.tcsEnabled
                 }
-                if (status.mode === 'grip' || status.mode === 'performance' || status.mode === 'legacy') {
+                if (status.mode === 'grip' || status.mode === 'balanced' || status.mode === 'performance' || status.mode === 'legacy') {
                   scope.mode = status.mode
                 }
               })
@@ -90,7 +90,7 @@
           }
 
           scope.toggleMode = function (direction) {
-            var modes = ['performance', 'grip', 'legacy']
+            var modes = ['performance', 'balanced', 'grip', 'legacy']
             var currentIndex = modes.indexOf(scope.mode)
             var nextMode = modes[(currentIndex + direction + modes.length) % modes.length]
             scope.setMode(nextMode)
